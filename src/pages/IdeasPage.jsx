@@ -50,6 +50,20 @@ function IdeasPage() {
                 <IdeaCard key={idea.id} idea={idea} />
               ))}
             </div>
+
+            <div className="ideas-bottom-cta">
+              <div className="ideas-cta-card">
+                <div className="ideas-cta-content">
+                  <h2 className="ideas-cta-title">Have a suggestion for campus?</h2>
+                  <p className="ideas-cta-desc">
+                    Every positive campus change begins with a student proposal. Share your idea with the community today.
+                  </p>
+                </div>
+                <Link to="/submit" className="btn btn-primary">
+                  + Submit an Idea
+                </Link>
+              </div>
+            </div>
           </>
         )}
       </section>

@@ -80,3 +80,18 @@ export const mockIdeas = [
     createdAt: '6 days ago',
   },
 ]
+
+export const IDEA_CATEGORIES = [
+  'Academics',
+  'Campus Life',
+  'Dining',
+  'Facilities',
+  'Sustainability',
+  'Transportation',
+  'Wellness',
+]
+
+export function addMockIdea(newIdea) {
+  mockIdeas.unshift(newIdea)
+  return newIdea
+}
