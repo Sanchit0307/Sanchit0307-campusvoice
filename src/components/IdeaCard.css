@@ -15,6 +15,10 @@
   border-color: #cbd5e1;
 }
 
+.clickable-idea-card {
+  cursor: pointer;
+}
+
 .idea-card-header {
   display: flex;
   align-items: center;
@@ -98,6 +102,46 @@
   color: var(--color-text-primary);
   line-height: 1.35;
   letter-spacing: -0.015em;
+}
+
+.idea-card-title-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.idea-card-title-link:hover,
+.clickable-idea-card:hover .idea-card-title-link {
+  color: var(--color-primary);
+}
+
+.idea-card-title-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.idea-card-view-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.idea-card-view-link:hover,
+.clickable-idea-card:hover .idea-card-view-link {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+.idea-card-view-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .idea-card-description {
