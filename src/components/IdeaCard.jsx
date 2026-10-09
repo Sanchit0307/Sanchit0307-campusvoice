@@ -1,9 +1,12 @@
+import { useNavigate, Link } from 'react-router-dom'
 import './IdeaCard.css'
 
 function IdeaCard({ idea }) {
+  const navigate = useNavigate()
+
   if (!idea) return null
 
-  const { title, description, category, status, upvotes } = idea
+  const { id, title, description, category, status, upvotes } = idea
 
   const getStatusClass = (statusName) => {
     switch (statusName) {
@@ -21,8 +24,21 @@ function IdeaCard({ idea }) {
     }
   }
 
+  const handleCardClick = (e) => {
+    // Prevent unintended card navigation if the user interacts with interactive elements
+    if (e.target.closest('button, a, input, select, textarea, [data-prevent-card-nav]')) {
+      return
+    }
+    if (id) {
+      navigate(`/ideas/${id}`)
+    }
+  }
+
   return (
-    <article className="idea-card">
+    <article
+      className="idea-card clickable-idea-card"
+      onClick={handleCardClick}
+    >
       <div className="idea-card-header">
         <span className="idea-category-tag">{category}</span>
         <span className={`idea-status-badge ${getStatusClass(status)}`}>
@@ -32,7 +48,15 @@ function IdeaCard({ idea }) {
       </div>
 
       <div className="idea-card-body">
-        <h2 className="idea-card-title">{title}</h2>
+        <h2 className="idea-card-title">
+          {id ? (
+            <Link to={`/ideas/${id}`} className="idea-card-title-link">
+              {title}
+            </Link>
+          ) : (
+            title
+          )}
+        </h2>
         <p className="idea-card-description">{description}</p>
       </div>
 
@@ -42,6 +66,16 @@ function IdeaCard({ idea }) {
           <span className="idea-upvote-count">{upvotes}</span>
           <span className="idea-upvote-label">upvotes</span>
         </div>
+
+        {id && (
+          <Link
+            to={`/ideas/${id}`}
+            className="idea-card-view-link"
+            aria-label={`View details for ${title}`}
+          >
+            View Details &rarr;
+          </Link>
+        )}
       </div>
     </article>
   )

@@ -95,3 +95,8 @@ export function addMockIdea(newIdea) {
   mockIdeas.unshift(newIdea)
   return newIdea
 }
+
+export function getMockIdeaById(id) {
+  if (!id) return null
+  return mockIdeas.find((idea) => idea.id === id) || null
+}
