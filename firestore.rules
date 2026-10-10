@@ -59,6 +59,37 @@ service cloud.firestore {
           && data.createdAt is timestamp
           && data.updatedAt is timestamp;
       }
+
+      // ===============================================================
+      // VOTES SUBCOLLECTION: ideas/{ideaId}/votes/{userId}
+      // ===============================================================
+      match /votes/{userId} {
+        // 1. Public read for vote documents (required for getCountFromServer aggregation & checking vote state)
+        // NOTE: Exposes voter UIDs for the MVP to allow client aggregation without a trusted backend.
+        allow read: if true;
+
+        // 2. Authenticated user can ONLY create their own vote document
+        allow create: if isValidVote(userId);
+
+        // 3. Deny client updates completely (votes are toggle-only, cannot be edited)
+        allow update: if false;
+
+        // 4. Authenticated user can ONLY delete their own vote document (toggle unvote)
+        allow delete: if request.auth != null && request.auth.uid == userId;
+
+        // Validation function for incoming vote documents
+        function isValidVote(ownerId) {
+          let data = request.resource.data;
+          let voteRequiredKeys = ['userId', 'createdAt'];
+
+          return request.auth != null
+            && request.auth.uid == ownerId
+            && data.keys().hasAll(voteRequiredKeys)
+            && data.keys().hasOnly(voteRequiredKeys)
+            && data.userId == ownerId
+            && data.createdAt is timestamp;
+        }
+      }
     }
   }
 }
