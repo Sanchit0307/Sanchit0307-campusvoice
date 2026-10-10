@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { IDEA_CATEGORIES, addMockIdea } from '../data/mockIdeas'
+import { IDEA_CATEGORIES } from '../data/mockIdeas'
+import { createIdea } from '../services/ideasService'
 import IdeaCard from '../components/IdeaCard'
 import './SubmitIdeaPage.css'
 
@@ -19,6 +20,8 @@ function SubmitIdeaPage() {
   const [errors, setErrors] = useState({})
   const [submittedIdea, setSubmittedIdea] = useState(null)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -26,6 +29,10 @@ function SubmitIdeaPage() {
       ...prev,
       [name]: value,
     }))
+
+    if (submitError) {
+      setSubmitError(null)
+    }
 
     // Clear field-specific error as the user types
     if (errors[name]) {
@@ -65,8 +72,14 @@ function SubmitIdeaPage() {
     return nextErrors
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (isSubmitting) {
+      return
+    }
+
+    setSubmitError(null)
 
     const validationErrors = validate()
     if (Object.keys(validationErrors).length > 0) {
@@ -81,19 +94,22 @@ function SubmitIdeaPage() {
       return
     }
 
-    const newIdea = {
-      id: `idea-${Date.now()}`,
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      category: formData.category,
-      status: 'Submitted',
-      upvotes: 1,
-      createdAt: 'Just now',
-    }
+    try {
+      setIsSubmitting(true)
+      const newIdea = await createIdea({
+        title: formData.title.trim(),
+        category: formData.category,
+        description: formData.description.trim(),
+      })
 
-    addMockIdea(newIdea)
-    setSubmittedIdea(newIdea)
-    setIsSuccess(true)
+      setSubmittedIdea(newIdea)
+      setIsSuccess(true)
+    } catch (err) {
+      console.error('Failed to submit proposal to Firestore:', err)
+      setSubmitError(err.message || 'Failed to submit proposal. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleResetForm = () => {
@@ -105,6 +121,8 @@ function SubmitIdeaPage() {
     setErrors({})
     setSubmittedIdea(null)
     setIsSuccess(false)
+    setIsSubmitting(false)
+    setSubmitError(null)
   }
 
   const getCounterClass = (currentLength, maxLength) => {
@@ -182,7 +200,14 @@ function SubmitIdeaPage() {
               </p>
             </div>
 
-            {Object.keys(errors).length > 0 && (
+            {submitError && (
+              <div className="form-summary-alert" role="alert">
+                <span className="form-alert-icon" aria-hidden="true">⚠️</span>
+                <span>{submitError}</span>
+              </div>
+            )}
+
+            {Object.keys(errors).length > 0 && !submitError && (
               <div className="form-summary-alert" role="alert">
                 <span className="form-alert-icon" aria-hidden="true">⚠️</span>
                 <span>Please fix the highlighted fields before submitting your proposal.</span>
@@ -304,8 +329,12 @@ function SubmitIdeaPage() {
 
               {/* Form Buttons */}
               <div className="form-actions">
-                <button type="submit" className="btn btn-primary">
-                  Submit Proposal
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Submitting Proposal...' : 'Submit Proposal'}
                 </button>
                 <Link to="/ideas" className="btn btn-secondary">
                   Cancel
