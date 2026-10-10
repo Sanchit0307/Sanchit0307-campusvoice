@@ -8,10 +8,13 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  getCountFromServer,
+  runTransaction,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../firebase/firebase'
 
 const IDEAS_COLLECTION = 'ideas'
+const VOTES_SUBCOLLECTION = 'votes'
 
 /**
  * Formats a Firestore timestamp, JS Date, or raw timestamp value into a readable string.
@@ -73,7 +76,7 @@ function formatDate(date) {
  * Normalizes a Firestore document snapshot into an application Idea object.
  * Preserves compatibility with existing components expecting either `upvotes` or `upvoteCount`.
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap
- * @returns {object}
+ * @returns {object|null}
  */
 export function normalizeIdeaDoc(docSnap) {
   if (!docSnap || !docSnap.exists()) {
@@ -99,6 +102,7 @@ export function normalizeIdeaDoc(docSnap) {
     upvoteCount,
     // Preserve legacy upvotes field for backward compatibility with existing components
     upvotes: upvoteCount,
+    hasUpvoted: false,
     createdAt: formatIdeaTimestamp(data.createdAt),
     createdAtRaw: data.createdAt ?? null,
     updatedAt: formatIdeaTimestamp(data.updatedAt),
@@ -109,6 +113,7 @@ export function normalizeIdeaDoc(docSnap) {
 /**
  * Maps Firestore errors into human-readable, categorized messages.
  * @param {Error} error
+ * @param {string} [contextMessage]
  * @returns {Error}
  */
 function handleFirestoreError(error, contextMessage = 'Database operation failed') {
@@ -121,7 +126,7 @@ function handleFirestoreError(error, contextMessage = 'Database operation failed
 
   if (code === 'permission-denied') {
     const customErr = new Error(
-      'Firestore permission denied. Please verify your Firestore Security Rules in the Firebase Console.'
+      'Firestore permission denied. Please verify your authentication status and Firestore Security Rules.'
     )
     customErr.code = code
     return customErr
@@ -166,7 +171,158 @@ function assertFirebaseConfigured() {
 }
 
 /**
+ * Authoritatively derives the live vote count for an idea from its votes subcollection.
+ * Uses Firestore's getCountFromServer() aggregation query (1 read per 1,000 counted index entries).
+ * @param {string} ideaId
+ * @returns {Promise<number>}
+ */
+export async function getIdeaVoteCount(ideaId) {
+  assertFirebaseConfigured()
+
+  if (!ideaId || typeof ideaId !== 'string') {
+    return 0
+  }
+
+  try {
+    const votesCol = collection(db, IDEAS_COLLECTION, ideaId, VOTES_SUBCOLLECTION)
+    const snapshot = await getCountFromServer(votesCol)
+    return snapshot.data().count || 0
+  } catch (error) {
+    console.error(`Error fetching vote count for idea ${ideaId}:`, error)
+    throw handleFirestoreError(error, `Failed to fetch vote count for idea ${ideaId}`)
+  }
+}
+
+/**
+ * Checks whether the specified user has an existing vote document in ideas/{ideaId}/votes/{userId}.
+ * @param {string} ideaId
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function hasUserUpvoted(ideaId, userId) {
+  if (!isFirebaseConfigured() || !db) {
+    return false
+  }
+
+  if (!ideaId || !userId || typeof ideaId !== 'string' || typeof userId !== 'string') {
+    return false
+  }
+
+  try {
+    const voteRef = doc(db, IDEAS_COLLECTION, ideaId, VOTES_SUBCOLLECTION, userId)
+    const voteSnap = await getDoc(voteRef)
+    return voteSnap.exists()
+  } catch (error) {
+    console.error(`Error checking vote status for user ${userId} on idea ${ideaId}:`, error)
+    throw handleFirestoreError(error, `Failed to check vote status for idea ${ideaId}`)
+  }
+}
+
+/**
+ * Concurrency-safe toggle for an authenticated user's upvote on a proposal.
+ * Uses a Firestore runTransaction() to inspect and atomically create or delete
+ * the user's vote document at ideas/{ideaId}/votes/{userId}.
+ *
+ * Concurrency & Integrity Guarantees:
+ * - If the vote document exists, it is deleted (unvote).
+ * - If the vote document does not exist, it is created (upvote) with valid schema.
+ * - Firestore transactions serialize database writes, ensuring atomic commit.
+ *   However, simultaneous actions across tabs or rapid clicks may still encounter
+ *   conflicts; UI callers must maintain pending button locks and reconcile actual
+ *   Firestore state using reconcileVoteState() on errors or failed writes.
+ * - Authorization boundary: The actual permission check is enforced by Firestore
+ *   Security Rules (request.auth.uid == userId); the caller must pass the active
+ *   user's verified UID from Firebase Auth.
+ *
+ * Returns the new user vote state and the authoritative server-derived count.
+ *
+ * @param {string} ideaId
+ * @param {string} userId
+ * @returns {Promise<{ hasUpvoted: boolean, upvoteCount: number|null }>}
+ */
+export async function toggleUpvote(ideaId, userId) {
+  assertFirebaseConfigured()
+
+  if (!ideaId || typeof ideaId !== 'string') {
+    throw new Error('Valid Idea ID is required to toggle an upvote.')
+  }
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Authenticated User ID is required to toggle an upvote.')
+  }
+
+  const voteDocRef = doc(db, IDEAS_COLLECTION, ideaId, VOTES_SUBCOLLECTION, userId)
+
+  let transactionResult
+  try {
+    transactionResult = await runTransaction(db, async (transaction) => {
+      const voteSnap = await transaction.get(voteDocRef)
+
+      if (voteSnap.exists()) {
+        // Vote document exists -> user is unvoting (toggle off)
+        transaction.delete(voteDocRef)
+        return { hasUpvoted: false }
+      }
+
+      // Vote document does not exist -> user is voting (toggle on)
+      transaction.set(voteDocRef, {
+        userId,
+        createdAt: serverTimestamp(),
+      })
+      return { hasUpvoted: true }
+    })
+  } catch (error) {
+    console.error(
+      `Transaction failed while toggling upvote on idea ${ideaId} for user ${userId}:`,
+      error
+    )
+    throw handleFirestoreError(error, `Failed to update vote on idea ${ideaId}`)
+  }
+
+  const hasUpvoted = transactionResult?.hasUpvoted ?? false
+
+  // Authoritatively derive the new count from Firestore
+  try {
+    const updatedCount = await getIdeaVoteCount(ideaId)
+    return {
+      hasUpvoted,
+      upvoteCount: updatedCount,
+    }
+  } catch (countError) {
+    console.warn(
+      `Vote toggled successfully, but failed to fetch updated count for idea ${ideaId}:`,
+      countError
+    )
+    return {
+      hasUpvoted,
+      upvoteCount: null,
+    }
+  }
+}
+
+/**
+ * Reconciles the local client UI state with authoritative database state.
+ * Called after failed writes or when recovering from network/permission errors.
+ * @param {string} ideaId
+ * @param {string|null} [userId]
+ * @returns {Promise<{ upvoteCount: number, hasUpvoted: boolean }>}
+ */
+export async function reconcileVoteState(ideaId, userId = null) {
+  assertFirebaseConfigured()
+
+  const countPromise = getIdeaVoteCount(ideaId)
+  const userVotePromise = userId ? hasUserUpvoted(ideaId, userId) : Promise.resolve(false)
+
+  const [upvoteCount, hasUpvoted] = await Promise.all([countPromise, userVotePromise])
+  return {
+    upvoteCount,
+    hasUpvoted,
+  }
+}
+
+/**
  * Creates a new idea in the Firestore 'ideas' collection.
+ * Preserves the exact 9-field schema validated by Issue #6.
+ *
  * @param {object} ideaInput
  * @param {string} ideaInput.title
  * @param {string} ideaInput.description
@@ -218,6 +374,7 @@ export async function createIdea({
       id: docRef.id,
       ...docPayload,
       upvotes: 0,
+      hasUpvoted: false,
       createdAt: 'Just now',
       updatedAt: 'Just now',
     }
@@ -229,18 +386,27 @@ export async function createIdea({
 
 /**
  * Fetches the ideas list from Firestore ordered by creation date (newest first).
- * Separately handles missing-index errors.
+ * Authoritatively attaches server-derived vote counts from the votes subcollection.
+ * If currentUserId is provided, also checks whether the user has upvoted each idea.
+ *
+ * Per-Idea Aggregation Cost Note:
+ * For N ideas, this issues N lightweight getCountFromServer aggregation queries.
+ * In Firestore, each aggregation query costs only 1 document read per 1,000 counted index entries.
+ *
+ * @param {string|null} [currentUserId] - Optional UID of current user to check vote state.
  * @returns {Promise<Array<object>>}
  */
-export async function getIdeas() {
+export async function getIdeas(currentUserId = null) {
   assertFirebaseConfigured()
 
   const ideasCol = collection(db, IDEAS_COLLECTION)
   const orderedQuery = query(ideasCol, orderBy('createdAt', 'desc'))
 
+  let ideaDocs = []
+
   try {
     const snapshot = await getDocs(orderedQuery)
-    return snapshot.docs.map((docSnap) => normalizeIdeaDoc(docSnap))
+    ideaDocs = snapshot.docs.map((docSnap) => normalizeIdeaDoc(docSnap))
   } catch (error) {
     // Specifically handle missing-index error separately
     const isMissingIndex =
@@ -256,7 +422,7 @@ export async function getIdeas() {
         const fallbackSnapshot = await getDocs(ideasCol)
         const items = fallbackSnapshot.docs.map((docSnap) => normalizeIdeaDoc(docSnap))
         // Sort client-side by raw timestamp or fallback
-        return items.sort((a, b) => {
+        ideaDocs = items.sort((a, b) => {
           const aTime = a.createdAtRaw?.seconds || 0
           const bTime = b.createdAtRaw?.seconds || 0
           return bTime - aTime
@@ -264,20 +430,56 @@ export async function getIdeas() {
       } catch (fallbackError) {
         throw handleFirestoreError(fallbackError, 'Failed to fetch ideas list')
       }
+    } else {
+      console.error('Error fetching ideas list from Firestore:', error)
+      throw handleFirestoreError(error, 'Failed to fetch ideas list')
     }
-
-    console.error('Error fetching ideas list from Firestore:', error)
-    throw handleFirestoreError(error, 'Failed to fetch ideas list')
   }
+
+  // Derive vote count and user upvote status for each idea in parallel
+  const augmentedIdeas = await Promise.all(
+    ideaDocs.map(async (idea) => {
+      try {
+        const countPromise = getIdeaVoteCount(idea.id)
+        const userVotePromise = currentUserId
+          ? hasUserUpvoted(idea.id, currentUserId)
+          : Promise.resolve(false)
+
+        const [authoritativeCount, hasUpvoted] = await Promise.all([
+          countPromise,
+          userVotePromise,
+        ])
+
+        return {
+          ...idea,
+          upvoteCount: authoritativeCount,
+          upvotes: authoritativeCount,
+          hasUpvoted,
+        }
+      } catch (countErr) {
+        // Fall back gracefully to the initial count if subcollection read fails
+        console.warn(`Could not derive votes for idea ${idea.id}:`, countErr)
+        return {
+          ...idea,
+          hasUpvoted: false,
+        }
+      }
+    })
+  )
+
+  return augmentedIdeas
 }
 
 /**
  * Fetches a single idea document by its Firestore document ID.
- * Returns null if the document does not exist.
+ * Authoritatively attaches the server-derived vote count from its votes subcollection.
+ * If currentUserId is provided, also checks whether the user has upvoted this idea.
+ *
  * @param {string} id
+ * @param {string|null} [currentUserId]
  * @returns {Promise<object|null>}
  */
-export async function getIdeaById(id) {
+export async function getIdeaById(id, currentUserId = null) {
   assertFirebaseConfigured()
 
   if (!id || typeof id !== 'string') {
@@ -292,7 +494,33 @@ export async function getIdeaById(id) {
       return null
     }
 
-    return normalizeIdeaDoc(docSnap)
+    const normalizedIdea = normalizeIdeaDoc(docSnap)
+
+    // Authoritatively attach live vote count and user status
+    try {
+      const countPromise = getIdeaVoteCount(id)
+      const userVotePromise = currentUserId
+        ? hasUserUpvoted(id, currentUserId)
+        : Promise.resolve(false)
+
+      const [authoritativeCount, hasUpvoted] = await Promise.all([
+        countPromise,
+        userVotePromise,
+      ])
+
+      return {
+        ...normalizedIdea,
+        upvoteCount: authoritativeCount,
+        upvotes: authoritativeCount,
+        hasUpvoted,
+      }
+    } catch (countErr) {
+      console.warn(`Could not derive vote count for idea ${id}:`, countErr)
+      return {
+        ...normalizedIdea,
+        hasUpvoted: false,
+      }
+    }
   } catch (error) {
     console.error(`Error fetching idea document with ID "${id}":`, error)
     throw handleFirestoreError(error, `Failed to load idea details for ${id}`)
@@ -301,6 +529,8 @@ export async function getIdeaById(id) {
 
 /**
  * Updates editable fields of an idea document in Firestore.
+ * Preserved for future administrative workflows.
+ *
  * @param {string} id
  * @param {object} updateData
  * @returns {Promise<void>}

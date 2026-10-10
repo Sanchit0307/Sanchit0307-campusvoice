@@ -86,9 +86,158 @@
   font-weight: 600;
 }
 
+/* Authentication Controls in Navbar */
+.navbar-auth-section {
+  display: flex;
+  align-items: center;
+  margin-left: 0.5rem;
+}
+
+.navbar-auth-loading-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background-color: var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.auth-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: authSpin 0.7s linear infinite;
+}
+
+@keyframes authSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.navbar-auth-unconfigured-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  background-color: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #b45309;
+}
+
+.auth-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.auth-dot.is-warning {
+  background-color: #f59e0b;
+}
+
+.navbar-signin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.navbar-signin-btn:hover:not(:disabled) {
+  background-color: var(--color-border-subtle);
+  border-color: #cbd5e1;
+}
+
+.navbar-signin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* User Profile Badge */
+.navbar-user-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.35rem;
+  background-color: var(--color-border-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+}
+
+.navbar-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.navbar-user-avatar-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.navbar-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar-user-name {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navbar-signout-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navbar-signout-btn:hover:not(:disabled) {
+  color: #ef4444;
+  background-color: #fee2e2;
+}
+
+.navbar-signout-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Call to action button in navbar */
 .navbar-actions {
-  margin-left: 0.75rem;
+  margin-left: 0.5rem;
   display: flex;
   align-items: center;
 }
@@ -140,6 +289,27 @@
   transition: all 0.25s ease;
 }
 
+/* Feedback Error Bar */
+.navbar-auth-error-bar {
+  background-color: #fef2f2;
+  border-bottom: 1px solid #fee2e2;
+  color: #991b1b;
+  font-size: 0.825rem;
+  padding: 0.4rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.error-dismiss-btn {
+  background: transparent;
+  border: none;
+  color: #991b1b;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
 /* Responsive styles */
 @media (max-width: 768px) {
   .brand-tag {
@@ -173,11 +343,33 @@
     padding: 0.75rem 1rem;
   }
 
-  .navbar-actions {
+  .navbar-auth-section {
     margin-left: 0;
     margin-top: 0.5rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--color-border-subtle);
+    justify-content: center;
+  }
+
+  .navbar-signin-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.65rem 1rem;
+  }
+
+  .navbar-user-profile {
+    width: 100%;
+    justify-content: space-between;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .navbar-user-name {
+    max-width: 200px;
+  }
+
+  .navbar-actions {
+    margin-left: 0;
+    margin-top: 0.5rem;
   }
 
   .navbar-cta-btn {
