@@ -6,7 +6,8 @@ function IdeaCard({ idea }) {
 
   if (!idea) return null
 
-  const { id, title, description, category, status, upvotes } = idea
+  const { id, title, description, category, status, upvotes, upvoteCount } = idea
+  const displayUpvotes = typeof upvoteCount === 'number' ? upvoteCount : (typeof upvotes === 'number' ? upvotes : 0)
 
   const getStatusClass = (statusName) => {
     switch (statusName) {
@@ -61,9 +62,9 @@ function IdeaCard({ idea }) {
       </div>
 
       <div className="idea-card-footer">
-        <div className="idea-upvote-badge" aria-label={`${upvotes} upvotes`}>
+        <div className="idea-upvote-badge" aria-label={`${displayUpvotes} upvotes`}>
           <span className="idea-upvote-icon" aria-hidden="true">▲</span>
-          <span className="idea-upvote-count">{upvotes}</span>
+          <span className="idea-upvote-count">{displayUpvotes}</span>
           <span className="idea-upvote-label">upvotes</span>
         </div>
 

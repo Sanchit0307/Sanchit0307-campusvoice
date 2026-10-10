@@ -1,10 +1,65 @@
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getMockIdeaById } from '../data/mockIdeas'
+import { getIdeaById } from '../services/ideasService'
 import './IdeaDetailPage.css'
 
 function IdeaDetailPage() {
   const { id } = useParams()
-  const idea = getMockIdeaById(id)
+  const [idea, setIdea] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const loadIdea = async () => {
+    if (!id) {
+      setIdea(null)
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    try {
+      const fetchedIdea = await getIdeaById(id)
+      setIdea(fetchedIdea)
+    } catch (err) {
+      console.error(`Failed to load idea "${id}" from Firestore:`, err)
+      setError(err.message || 'Failed to load idea details from the database.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    let isCancelled = false
+
+    if (!id) {
+      return
+    }
+
+    async function fetchData() {
+      try {
+        const fetchedIdea = await getIdeaById(id)
+        if (!isCancelled) {
+          setIdea(fetchedIdea)
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error(`Failed to load idea "${id}" from Firestore:`, err)
+          setError(err.message || 'Failed to load idea details from the database.')
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchData()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [id])
 
   const getStatusClass = (statusName) => {
     switch (statusName) {
@@ -36,6 +91,54 @@ function IdeaDetailPage() {
       default:
         return 'This proposal has been posted to the campus portal and is gathering community visibility and feedback.'
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="page-container">
+        <div className="ideas-state-card" role="status" aria-live="polite">
+          <div className="ideas-loading-spinner" aria-hidden="true" />
+          <h2 className="ideas-state-title">Loading Proposal Details...</h2>
+          <p className="ideas-state-desc">Fetching proposal information from the database.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="page-container">
+        <div className="idea-not-found-card" role="alert" aria-live="assertive">
+          <div className="not-found-icon-wrap" aria-hidden="true">
+            <svg
+              width="40"
+              height="40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <div className="badge not-found-badge">Database Error</div>
+          <h1 className="not-found-title">Unable to Load Proposal</h1>
+          <p className="not-found-message">{error}</p>
+          <div className="not-found-actions">
+            <button type="button" onClick={loadIdea} className="btn btn-primary">
+              Try Again
+            </button>
+            <Link to="/ideas" className="btn btn-secondary">
+              &larr; Back to Ideas Listing
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Handle invalid or missing idea IDs gracefully
@@ -166,9 +269,11 @@ function IdeaDetailPage() {
             <div className="upvote-highlight">
               <span className="upvote-highlight-arrow" aria-hidden="true">▲</span>
               <div className="upvote-highlight-numbers">
-                <span className="upvote-number">{idea.upvotes}</span>
+                <span className="upvote-number">
+                  {typeof idea.upvoteCount === 'number' ? idea.upvoteCount : (typeof idea.upvotes === 'number' ? idea.upvotes : 0)}
+                </span>
                 <span className="upvote-word">
-                  {idea.upvotes === 1 ? 'Student Upvote' : 'Student Upvotes'}
+                  {(typeof idea.upvoteCount === 'number' ? idea.upvoteCount : (typeof idea.upvotes === 'number' ? idea.upvotes : 0)) === 1 ? 'Student Upvote' : 'Student Upvotes'}
                 </span>
               </div>
             </div>
@@ -191,6 +296,12 @@ function IdeaDetailPage() {
                 <dt className="meta-dl-term">Category</dt>
                 <dd className="meta-dl-def">{idea.category}</dd>
               </div>
+              {idea.authorName && (
+                <div className="meta-dl-row">
+                  <dt className="meta-dl-term">Author</dt>
+                  <dd className="meta-dl-def">{idea.authorName}</dd>
+                </div>
+              )}
               <div className="meta-dl-row">
                 <dt className="meta-dl-term">Current Status</dt>
                 <dd className="meta-dl-def">

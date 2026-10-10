@@ -1,12 +1,56 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { mockIdeas } from '../data/mockIdeas'
+import { getIdeas } from '../services/ideasService'
 import IdeaCard from '../components/IdeaCard'
 import EmptyState from '../components/EmptyState'
 import './IdeasPage.css'
 
 function IdeasPage() {
-  const [ideas] = useState(mockIdeas)
+  const [ideas, setIdeas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchIdeas = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await getIdeas()
+      setIdeas(data)
+    } catch (err) {
+      console.error('Failed to load ideas from Firestore:', err)
+      setError(err.message || 'Failed to load campus proposals. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    let isCancelled = false
+
+    async function loadData() {
+      try {
+        const data = await getIdeas()
+        if (!isCancelled) {
+          setIdeas(data)
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error('Failed to load ideas from Firestore:', err)
+          setError(err.message || 'Failed to load campus proposals. Please try again.')
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadData()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
 
   return (
     <div className="page-container">
@@ -28,9 +72,29 @@ function IdeasPage() {
         </div>
       </div>
 
-      {/* Ideas Listing or Empty State */}
+      {/* Ideas Listing or States */}
       <section className="ideas-content-section" aria-label="Campus Ideas Listing">
-        {ideas.length === 0 ? (
+        {loading ? (
+          <div className="ideas-state-card" role="status" aria-live="polite">
+            <div className="ideas-loading-spinner" aria-hidden="true" />
+            <h2 className="ideas-state-title">Loading Campus Ideas...</h2>
+            <p className="ideas-state-desc">Fetching the latest student proposals from the database.</p>
+          </div>
+        ) : error ? (
+          <div className="ideas-state-card is-error" role="alert">
+            <div className="badge not-found-badge">Database Error</div>
+            <h2 className="ideas-state-title">Unable to Load Ideas</h2>
+            <p className="ideas-state-desc">{error}</p>
+            <div className="ideas-state-actions">
+              <button type="button" onClick={fetchIdeas} className="btn btn-primary">
+                Try Again
+              </button>
+              <Link to="/submit" className="btn btn-secondary">
+                Submit an Idea
+              </Link>
+            </div>
+          </div>
+        ) : ideas.length === 0 ? (
           <EmptyState
             title="No Campus Ideas Yet"
             description="There are currently no proposals in the feed. Be the first to suggest a campus improvement!"
