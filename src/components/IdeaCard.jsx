@@ -7,7 +7,15 @@ function IdeaCard({ idea }) {
   if (!idea) return null
 
   const { id, title, description, category, status, upvotes, upvoteCount } = idea
-  const displayUpvotes = typeof upvoteCount === 'number' ? upvoteCount : (typeof upvotes === 'number' ? upvotes : 0)
+  const isVoteCountUnavailable =
+    upvoteCount === null || (upvoteCount === undefined && upvotes === null)
+  const displayUpvotes = isVoteCountUnavailable
+    ? null
+    : typeof upvoteCount === 'number'
+      ? upvoteCount
+      : typeof upvotes === 'number'
+        ? upvotes
+        : 0
 
   const getStatusClass = (statusName) => {
     switch (statusName) {
@@ -62,10 +70,19 @@ function IdeaCard({ idea }) {
       </div>
 
       <div className="idea-card-footer">
-        <div className="idea-upvote-badge" aria-label={`${displayUpvotes} upvotes`}>
+        <div
+          className="idea-upvote-badge"
+          aria-label={
+            isVoteCountUnavailable
+              ? 'Vote count unavailable'
+              : `${displayUpvotes} ${displayUpvotes === 1 ? 'upvote' : 'upvotes'}`
+          }
+        >
           <span className="idea-upvote-icon" aria-hidden="true">▲</span>
-          <span className="idea-upvote-count">{displayUpvotes}</span>
-          <span className="idea-upvote-label">upvotes</span>
+          <span className="idea-upvote-count">
+            {isVoteCountUnavailable ? 'Unavailable' : displayUpvotes}
+          </span>
+          {!isVoteCountUnavailable && <span className="idea-upvote-label">upvotes</span>}
         </div>
 
         {id && (

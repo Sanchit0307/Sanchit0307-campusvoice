@@ -6,6 +6,7 @@ import {
   getDocs,
   updateDoc,
   query,
+  where,
   orderBy,
   serverTimestamp,
   getCountFromServer,
@@ -552,4 +553,89 @@ export async function updateIdea(id, updateData) {
     console.error(`Error updating idea document with ID "${id}":`, error)
     throw handleFirestoreError(error, `Failed to update idea ${id}`)
   }
+}
+
+/**
+ * Fetches ideas submitted by a specific student, identified by their authenticated userId.
+ * Safely excludes null or missing authorId, sorts results client-side by creation date (newest first)
+ * to avoid requiring composite indexes, and attaches authoritative vote counts.
+ *
+ * @param {string} userId - The authenticated student's UID.
+ * @returns {Promise<Array<object>>}
+ */
+export async function getUserIdeas(userId) {
+  if (!userId || typeof userId !== 'string' || !userId.trim()) {
+    return []
+  }
+
+  assertFirebaseConfigured()
+
+  const validUserId = userId.trim()
+  const ideasCol = collection(db, IDEAS_COLLECTION)
+  const userIdeasQuery = query(ideasCol, where('authorId', '==', validUserId))
+
+  let userDocs = []
+  try {
+    const snapshot = await getDocs(userIdeasQuery)
+    userDocs = snapshot.docs
+      .map((docSnap) => normalizeIdeaDoc(docSnap))
+      .filter((idea) => idea && idea.authorId === validUserId)
+  } catch (error) {
+    console.error(`Error fetching user ideas for authorId ${validUserId}:`, error)
+    throw handleFirestoreError(error, 'Failed to fetch your submitted proposals')
+  }
+
+  // Safe client-side sort by newest first (handles missing or null timestamps gracefully)
+  userDocs.sort((a, b) => {
+    const getTimestampValue = (idea) => {
+      if (!idea.createdAtRaw) return 0
+      if (typeof idea.createdAtRaw.toMillis === 'function') {
+        try {
+          return idea.createdAtRaw.toMillis()
+        } catch {
+          return 0
+        }
+      }
+      if (typeof idea.createdAtRaw.seconds === 'number') {
+        return idea.createdAtRaw.seconds * 1000
+      }
+      if (idea.createdAtRaw instanceof Date) {
+        return idea.createdAtRaw.getTime()
+      }
+      return 0
+    }
+
+    return getTimestampValue(b) - getTimestampValue(a)
+  })
+
+  // Authoritatively attach live vote counts for each user idea
+  const augmentedUserIdeas = await Promise.all(
+    userDocs.map(async (idea) => {
+      try {
+        const countPromise = getIdeaVoteCount(idea.id)
+        const userVotePromise = hasUserUpvoted(idea.id, validUserId)
+        const [authoritativeCount, hasUpvoted] = await Promise.all([
+          countPromise,
+          userVotePromise,
+        ])
+
+        return {
+          ...idea,
+          upvoteCount: authoritativeCount,
+          upvotes: authoritativeCount,
+          hasUpvoted,
+        }
+      } catch (countErr) {
+        console.warn(`Could not derive vote count for user idea ${idea.id}:`, countErr)
+        return {
+          ...idea,
+          upvoteCount: null,
+          upvotes: null,
+          hasUpvoted: null,
+        }
+      }
+    })
+  )
+
+  return augmentedUserIdeas
 }
