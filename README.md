@@ -1,6 +1,6 @@
 # CampusVoice — Student Ideas & Suggestions Portal
 
-A web application developed for **TechSpace BuildLab '26** (Solo Beginner Track). CampusVoice empowers students to propose campus improvement ideas, browse and upvote community suggestions, and track ideas through their review and implementation lifecycle.
+A web application developed for **TechSpace BuildLab '26** (Solo Beginner Track). CampusVoice empowers students to propose campus improvement ideas, browse and upvote community suggestions, and track ideas through their review and implementation lifecycle
 
 ---
 
