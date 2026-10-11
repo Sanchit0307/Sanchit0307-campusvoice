@@ -213,6 +213,19 @@
   text-overflow: ellipsis;
 }
 
+.navbar-moderator-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #4338ca;
+  background-color: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 9999px;
+  padding: 0.05rem 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  width: fit-content;
+}
+
 .navbar-signout-btn {
   background: transparent;
   border: none;

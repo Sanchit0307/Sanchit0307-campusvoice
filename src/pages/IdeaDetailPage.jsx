@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getIdeaById } from '../services/ideasService'
+import { getIdeaById, updateIdeaStatus, IDEA_STATUSES } from '../services/ideasService'
+import { useAuth } from '../context'
 import './IdeaDetailPage.css'
 
 function IdeaDetailPage() {
   const { id } = useParams()
+  const { isModerator } = useAuth()
   const [idea, setIdea] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [selectedStatus, setSelectedStatus] = useState('')
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [statusUpdateMessage, setStatusUpdateMessage] = useState(null)
+  const [statusUpdateError, setStatusUpdateError] = useState(null)
 
   const loadIdea = async () => {
     if (!id) {
@@ -90,6 +96,32 @@ function IdeaDetailPage() {
       case 'Submitted':
       default:
         return 'This proposal has been posted to the campus portal and is gathering community visibility and feedback.'
+    }
+  }
+
+  const handleStatusUpdate = async (e) => {
+    e.preventDefault()
+    if (!id || !selectedStatus || !idea || selectedStatus === idea.status || isUpdatingStatus) {
+      return
+    }
+
+    setIsUpdatingStatus(true)
+    setStatusUpdateError(null)
+    setStatusUpdateMessage(null)
+
+    try {
+      await updateIdeaStatus(id, selectedStatus)
+      setIdea((prev) => ({
+        ...prev,
+        status: selectedStatus,
+        updatedAt: 'Just now',
+      }))
+      setStatusUpdateMessage(`Proposal status successfully updated to "${selectedStatus}".`)
+    } catch (err) {
+      console.error('Failed to update proposal status:', err)
+      setStatusUpdateError(err.message || 'Failed to update proposal status.')
+    } finally {
+      setIsUpdatingStatus(false)
     }
   }
 
@@ -251,6 +283,66 @@ function IdeaDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Moderator Workflow Controls */}
+          {isModerator && (
+            <div className="detail-section-card moderator-control-card" aria-label="Moderator Workflow Controls">
+              <div className="moderator-card-header">
+                <span className="detail-section-icon" aria-hidden="true">🛡️</span>
+                <div>
+                  <h3 className="moderator-card-title">Moderator Workflow Controls</h3>
+                  <p className="moderator-card-subtitle">
+                    Advance or update this proposal&apos;s review stage. Only authorized campus moderators can make these updates.
+                  </p>
+                </div>
+              </div>
+
+              {statusUpdateMessage && (
+                <div className="moderator-alert is-success" role="status">
+                  <span>✓ {statusUpdateMessage}</span>
+                </div>
+              )}
+
+              {statusUpdateError && (
+                <div className="moderator-alert is-error" role="alert">
+                  <span>⚠️ {statusUpdateError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleStatusUpdate} className="moderator-status-form">
+                <div className="moderator-status-row">
+                  <label htmlFor="moderator-status-select" className="moderator-status-label">
+                    Change Status:
+                  </label>
+                  <select
+                    id="moderator-status-select"
+                    className="moderator-status-select"
+                    value={selectedStatus || idea.status}
+                    onChange={(e) => {
+                      setSelectedStatus(e.target.value)
+                      setStatusUpdateMessage(null)
+                      setStatusUpdateError(null)
+                    }}
+                    disabled={isUpdatingStatus}
+                  >
+                    {IDEA_STATUSES.map((statusOption) => (
+                      <option key={statusOption} value={statusOption}>
+                        {statusOption} {statusOption === idea.status ? '(Current)' : ''}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary moderator-update-btn"
+                    disabled={isUpdatingStatus || (selectedStatus && selectedStatus === idea.status)}
+                  >
+                    {isUpdatingStatus ? 'Updating Status...' : 'Apply Status Update'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
           <div className="detail-page-bottom-nav">
             <Link to="/ideas" className="btn btn-secondary">

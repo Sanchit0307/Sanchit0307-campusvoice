@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import { auth, googleProvider, isFirebaseConfigured } from '../firebase/firebase'
+import { checkIsModerator } from '../services/ideasService'
 import { AuthContext } from './AuthContext'
 
 /**
  * Authentication Provider component that supplies user state, loading status,
- * and auth action handlers to the entire application.
+ * role permissions, and auth action handlers to the entire application.
  *
  * Auth state resolution hierarchy for consumers:
  * 1. `!isConfigured`: Firebase is not configured (missing env vars or auth init).
@@ -19,6 +20,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(isConfigured)
   const [authError, setAuthError] = useState(null)
+  const [isModerator, setIsModerator] = useState(false)
 
   useEffect(() => {
     // If Firebase credentials are not configured or auth is not initialized, do nothing
@@ -26,23 +28,51 @@ export function AuthProvider({ children }) {
       return undefined
     }
 
+    let isCancelled = false
+
     // Subscribe to Firebase Auth state changes.
     // onAuthStateChanged is the canonical source of truth for the user state.
     const unsubscribe = onAuthStateChanged(
       auth,
-      (currentUser) => {
+      async (currentUser) => {
         setUser(currentUser)
-        setLoading(false)
-        setAuthError(null)
+
+        if (currentUser?.uid) {
+          try {
+            const moderator = await checkIsModerator(currentUser.uid)
+            if (!isCancelled) {
+              setIsModerator(moderator)
+            }
+          } catch {
+            if (!isCancelled) {
+              setIsModerator(false)
+            }
+          }
+        } else {
+          if (!isCancelled) {
+            setIsModerator(false)
+          }
+        }
+
+        if (!isCancelled) {
+          setLoading(false)
+          setAuthError(null)
+        }
       },
       (error) => {
         console.error('Firebase Auth state listener error:', error)
-        setAuthError(error)
-        setLoading(false)
+        if (!isCancelled) {
+          setAuthError(error)
+          setIsModerator(false)
+          setLoading(false)
+        }
       }
     )
 
-    return () => unsubscribe()
+    return () => {
+      isCancelled = true
+      unsubscribe()
+    }
   }, [isConfigured])
 
   /**
@@ -91,6 +121,7 @@ export function AuthProvider({ children }) {
 
     try {
       await signOut(auth)
+      setIsModerator(false)
       setAuthError(null)
     } catch (error) {
       console.error('Sign-out error:', error)
@@ -107,8 +138,9 @@ export function AuthProvider({ children }) {
       signInWithGoogle,
       signOutUser,
       isConfigured,
+      isModerator,
     }),
-    [user, loading, authError, signInWithGoogle, signOutUser, isConfigured]
+    [user, loading, authError, signInWithGoogle, signOutUser, isConfigured, isModerator]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -8,7 +8,8 @@ function Navbar() {
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [authFeedbackError, setAuthFeedbackError] = useState(null)
 
-  const { user, loading, isConfigured, signInWithGoogle, signOutUser } = useAuth()
+  const { user, loading, isConfigured, signInWithGoogle, signOutUser, isModerator } =
+    useAuth()
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((prev) => !prev)
@@ -185,6 +186,11 @@ function Navbar() {
                   <span className="navbar-user-name">
                     {user.displayName || user.email?.split('@')[0] || 'Student'}
                   </span>
+                  {isModerator && (
+                    <span className="navbar-moderator-pill" title="Verified Campus Moderator">
+                      Staff
+                    </span>
+                  )}
                 </div>
 
                 <button

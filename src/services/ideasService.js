@@ -16,6 +16,15 @@ import { db, isFirebaseConfigured } from '../firebase/firebase'
 
 const IDEAS_COLLECTION = 'ideas'
 const VOTES_SUBCOLLECTION = 'votes'
+const MODERATORS_COLLECTION = 'moderators'
+
+export const IDEA_STATUSES = Object.freeze([
+  'Submitted',
+  'Under Review',
+  'In Progress',
+  'Accepted',
+  'Implemented',
+])
 
 /**
  * Formats a Firestore timestamp, JS Date, or raw timestamp value into a readable string.
@@ -552,6 +561,66 @@ export async function updateIdea(id, updateData) {
   } catch (error) {
     console.error(`Error updating idea document with ID "${id}":`, error)
     throw handleFirestoreError(error, `Failed to update idea ${id}`)
+  }
+}
+
+/**
+ * Checks whether the given user has an authorized moderator role.
+ * Queries the 'moderators/{userId}' document and verifies role === 'moderator'.
+ *
+ * @param {string} userId - Authenticated user's UID.
+ * @returns {Promise<boolean>}
+ */
+export async function checkIsModerator(userId) {
+  if (!userId || typeof userId !== 'string' || !userId.trim()) {
+    return false
+  }
+
+  if (!isFirebaseConfigured() || !db) {
+    return false
+  }
+
+  try {
+    const modRef = doc(db, MODERATORS_COLLECTION, userId.trim())
+    const modSnap = await getDoc(modRef)
+    return Boolean(modSnap.exists() && modSnap.data()?.role === 'moderator')
+  } catch (error) {
+    console.warn(`Error verifying moderator status for user ${userId}:`, error)
+    return false
+  }
+}
+
+/**
+ * Updates the workflow status of an idea proposal.
+ * Validates that the new status belongs to the 5 canonical statuses.
+ * Authorization is strictly enforced at the Firestore Security Rules boundary (requires isModerator).
+ *
+ * @param {string} ideaId - Document ID of the idea to update.
+ * @param {string} newStatus - The new canonical status string.
+ * @returns {Promise<void>}
+ */
+export async function updateIdeaStatus(ideaId, newStatus) {
+  assertFirebaseConfigured()
+
+  if (!ideaId || typeof ideaId !== 'string' || !ideaId.trim()) {
+    throw new Error('Valid Idea ID is required to update idea status.')
+  }
+
+  if (!IDEA_STATUSES.includes(newStatus)) {
+    throw new Error(
+      `Invalid status "${newStatus}". Must be one of: ${IDEA_STATUSES.join(', ')}.`
+    )
+  }
+
+  try {
+    const docRef = doc(db, IDEAS_COLLECTION, ideaId.trim())
+    await updateDoc(docRef, {
+      status: newStatus,
+      updatedAt: serverTimestamp(),
+    })
+  } catch (error) {
+    console.error(`Error updating status for idea ${ideaId} to ${newStatus}:`, error)
+    throw handleFirestoreError(error, `Failed to update status for idea ${ideaId}`)
   }
 }
 

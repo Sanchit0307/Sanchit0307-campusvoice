@@ -9,7 +9,8 @@ import { AuthContext } from './AuthContext'
  *   authError: Error | null,
  *   signInWithGoogle: () => Promise<import('firebase/auth').User | null>,
  *   signOutUser: () => Promise<void>,
- *   isConfigured: boolean
+ *   isConfigured: boolean,
+ *   isModerator: boolean
  * }}
  */
 export function useAuth() {
