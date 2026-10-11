@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { IDEA_CATEGORIES } from '../data/mockIdeas'
 import { createIdea } from '../services/ideasService'
+import { useAuth } from '../context'
 import IdeaCard from '../components/IdeaCard'
 import './SubmitIdeaPage.css'
 
@@ -11,6 +12,7 @@ const DESC_MAX_LENGTH = 500
 const DESC_MIN_LENGTH = 20
 
 function SubmitIdeaPage() {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -100,6 +102,8 @@ function SubmitIdeaPage() {
         title: formData.title.trim(),
         category: formData.category,
         description: formData.description.trim(),
+        authorId: user?.uid ?? null,
+        authorName: user?.displayName || 'Anonymous Student',
       })
 
       setSubmittedIdea(newIdea)
