@@ -3,6 +3,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions for authentication and role authorization
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isModerator() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/moderators/$(request.auth.uid))
+        && get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.role == 'moderator';
+    }
+
+    // ===============================================================
+    // MODERATORS COLLECTION: moderators/{userId}
+    // Client writes are completely denied to prevent privilege escalation.
+    // Authenticated users can read moderator records to determine their role.
+    // ===============================================================
+    match /moderators/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ===============================================================
+    // IDEAS COLLECTION: ideas/{ideaId}
+    // ===============================================================
     match /ideas/{ideaId} {
       // 1. Prototype public read access for ideas feed and idea details
       allow read: if true;
@@ -10,10 +34,13 @@ service cloud.firestore {
       // 2. Prototype public create access with strict schema and field validation
       allow create: if isValidIdea();
 
-      // 3. Deny client-side updates and deletes (reserved for future auth & moderation issues)
-      allow update, delete: if false;
+      // 3. Allow only authorized moderators to update idea workflow status
+      allow update: if isModerator() && isValidStatusUpdate();
 
-      // Validation function for incoming idea documents
+      // 4. Deny client-side deletes completely
+      allow delete: if false;
+
+      // Validation function for incoming idea documents on proposal creation
       function isValidIdea() {
         let data = request.resource.data;
 
@@ -58,6 +85,25 @@ service cloud.firestore {
           && data.authorName.size() <= 100
           && data.createdAt is timestamp
           && data.updatedAt is timestamp;
+      }
+
+      // Validation function for moderator status transitions
+      function isValidStatusUpdate() {
+        let incoming = request.resource.data;
+        let existing = resource.data;
+        let diff = incoming.diff(existing);
+        let allowedStatuses = [
+          'Submitted',
+          'Under Review',
+          'In Progress',
+          'Accepted',
+          'Implemented'
+        ];
+
+        return diff.affectedKeys().hasOnly(['status', 'updatedAt'])
+          && diff.affectedKeys().hasAny(['status'])
+          && incoming.status in allowedStatuses
+          && incoming.updatedAt == request.time;
       }
 
       // ===============================================================

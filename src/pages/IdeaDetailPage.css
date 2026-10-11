@@ -404,3 +404,94 @@
     padding: 2.5rem 1.25rem;
   }
 }
+
+/* Moderator Control Card on Detail Page */
+.moderator-control-card {
+  border: 1.5px solid #c7d2fe;
+  background-color: #f8faff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+}
+
+.moderator-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.moderator-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e1b4b;
+  margin: 0 0 0.25rem;
+}
+
+.moderator-card-subtitle {
+  font-size: 0.875rem;
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.moderator-alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.moderator-alert.is-success {
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.moderator-alert.is-error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.moderator-status-form {
+  margin-top: 0.5rem;
+}
+
+.moderator-status-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.moderator-status-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.moderator-status-select {
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.moderator-status-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.moderator-update-btn {
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9rem;
+}

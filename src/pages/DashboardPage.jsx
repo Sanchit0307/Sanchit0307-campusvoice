@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context'
-import { getUserIdeas } from '../services/ideasService'
+import {
+  getUserIdeas,
+  getIdeas,
+  updateIdeaStatus,
+  IDEA_STATUSES,
+} from '../services/ideasService'
 import IdeaCard from '../components/IdeaCard'
 import EmptyState from '../components/EmptyState'
 import SignInPromptModal from '../components/SignInPromptModal'
@@ -9,14 +14,27 @@ import './DashboardPage.css'
 import './IdeasPage.css'
 
 function DashboardPage() {
-  const { user, loading: authLoading, signInWithGoogle, isConfigured } = useAuth()
+  const { user, loading: authLoading, signInWithGoogle, isConfigured, isModerator } = useAuth()
 
+  // Tab State for authorized moderators
+  const [activeTab, setActiveTab] = useState('my-proposals')
+
+  // Student Dashboard State
   const [ideas, setIdeas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false)
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [signInError, setSignInError] = useState(null)
+
+  // Moderation Queue State
+  const [queueIdeas, setQueueIdeas] = useState([])
+  const [queueLoading, setQueueLoading] = useState(false)
+  const [queueError, setQueueError] = useState(null)
+  const [statusFilter, setStatusFilter] = useState('All')
+  const [pendingQueueStatus, setPendingQueueStatus] = useState({})
+  const [updatingQueueId, setUpdatingQueueId] = useState(null)
+  const [queueFeedback, setQueueFeedback] = useState(null)
 
   const activeUserIdRef = useRef(null)
 
@@ -44,6 +62,20 @@ function DashboardPage() {
       })
   }, [])
 
+  const fetchQueueIdeas = useCallback(() => {
+    getIdeas()
+      .then((data) => {
+        setQueueIdeas(data)
+        setQueueError(null)
+        setQueueLoading(false)
+      })
+      .catch((err) => {
+        console.error('Failed to load moderation queue from Firestore:', err)
+        setQueueError(err.message || 'Failed to load moderation queue.')
+        setQueueLoading(false)
+      })
+  }, [])
+
   useEffect(() => {
     // Never query Firestore if auth is resolving or if user is signed out
     if (authLoading || !user?.uid) {
@@ -58,6 +90,13 @@ function DashboardPage() {
       activeUserIdRef.current = null
     }
   }, [authLoading, user?.uid, fetchUserIdeas])
+
+  // Lazy-load moderation queue when an authorized moderator switches to that tab
+  useEffect(() => {
+    if (isModerator && activeTab === 'moderation-queue' && queueIdeas.length === 0) {
+      fetchQueueIdeas()
+    }
+  }, [isModerator, activeTab, queueIdeas.length, fetchQueueIdeas])
 
   const handleGoogleSignIn = async () => {
     if (isSigningIn) return
@@ -76,7 +115,6 @@ function DashboardPage() {
       console.error('Dashboard Sign-In failed:', err)
       const code = err?.code || ''
       if (code === 'auth/popup-closed-by-user') {
-        // User voluntarily closed popup
         setSignInError(null)
       } else if (code === 'auth/unauthorized-domain') {
         setSignInError('This domain is not authorized in Firebase Console.')
@@ -90,17 +128,62 @@ function DashboardPage() {
     }
   }
 
-  // Calculate high-level summary metrics
+  const handleQueueStatusChange = (ideaId, newStatus) => {
+    setPendingQueueStatus((prev) => ({
+      ...prev,
+      [ideaId]: newStatus,
+    }))
+    setQueueFeedback(null)
+  }
+
+  const handleQueueStatusSubmit = async (ideaId, currentStatus) => {
+    const targetStatus = pendingQueueStatus[ideaId] || currentStatus
+    if (!ideaId || !targetStatus || targetStatus === currentStatus || updatingQueueId) {
+      return
+    }
+
+    setUpdatingQueueId(ideaId)
+    setQueueFeedback(null)
+
+    try {
+      await updateIdeaStatus(ideaId, targetStatus)
+
+      setQueueIdeas((prev) =>
+        prev.map((item) =>
+          item.id === ideaId ? { ...item, status: targetStatus, updatedAt: 'Just now' } : item
+        )
+      )
+
+      // Sync user proposals state if idea was also authored by the active moderator
+      setIdeas((prev) =>
+        prev.map((item) =>
+          item.id === ideaId ? { ...item, status: targetStatus, updatedAt: 'Just now' } : item
+        )
+      )
+
+      setQueueFeedback({
+        type: 'success',
+        message: `Status updated to "${targetStatus}".`,
+        ideaId,
+      })
+    } catch (err) {
+      console.error(`Failed to update status for idea ${ideaId}:`, err)
+      setQueueFeedback({
+        type: 'error',
+        message: err.message || 'Failed to update proposal status.',
+        ideaId,
+      })
+    } finally {
+      setUpdatingQueueId(null)
+    }
+  }
+
+  // Calculate high-level summary metrics for student dashboard
   const totalSubmissions = ideas.length
-
-  // Accurately counts proposals strictly in the existing 'Under Review' status
   const underReviewCount = ideas.filter((i) => i.status === 'Under Review').length
-
-  // Check if any idea's live vote count is explicitly unavailable (null)
   const hasUnavailableVoteCount = ideas.some(
     (i) => i.upvoteCount === null || (i.upvoteCount === undefined && i.upvotes === null)
   )
-
   const totalVotesReceived = hasUnavailableVoteCount
     ? null
     : ideas.reduce((sum, i) => {
@@ -113,17 +196,37 @@ function DashboardPage() {
         return sum + count
       }, 0)
 
+  // Filter moderation queue items
+  const filteredQueueIdeas = queueIdeas.filter((idea) => {
+    if (statusFilter === 'All') return true
+    return idea.status === statusFilter
+  })
+
   return (
     <div className="page-container">
       {/* Page Header */}
       <div className="dashboard-header">
         <div className="dashboard-header-content">
-          <div className="badge">Dashboard &bull; Student Hub</div>
+          <div className="badge">
+            {isModerator
+              ? activeTab === 'moderation-queue'
+                ? 'Moderation \u2022 Staff Portal'
+                : 'Dashboard \u2022 Student Hub'
+              : 'Dashboard \u2022 Student Hub'}
+          </div>
           <h1 className="page-title">
-            {user ? (user.displayName ? `${user.displayName}'s Dashboard` : 'Student Dashboard') : 'Student Dashboard'}
+            {user
+              ? activeTab === 'moderation-queue' && isModerator
+                ? 'Campus Moderation Queue'
+                : user.displayName
+                  ? `${user.displayName}'s Dashboard`
+                  : 'Student Dashboard'
+              : 'Student Dashboard'}
           </h1>
           <p className="page-subtitle">
-            Track the status of your campus proposals, monitor community upvotes, and see administrative reviews in one place.
+            {activeTab === 'moderation-queue' && isModerator
+              ? 'Review campus submissions, advance proposal lifecycle stages, and monitor community momentum.'
+              : 'Track the status of your campus proposals, monitor community upvotes, and see administrative reviews in one place.'}
           </p>
         </div>
 
@@ -225,103 +328,296 @@ function DashboardPage() {
             </div>
           )}
         </div>
-      ) : loading ? (
-        /* Loading Proposals */
-        <div className="ideas-state-card" role="status" aria-live="polite">
-          <div className="ideas-loading-spinner" aria-hidden="true" />
-          <h2 className="ideas-state-title">Loading Your Dashboard...</h2>
-          <p className="ideas-state-desc">Fetching your submitted campus proposals from Firestore.</p>
-        </div>
-      ) : error ? (
-        /* Error State */
-        <div className="ideas-state-card is-error" role="alert">
-          <div className="badge not-found-badge">Database Error</div>
-          <h2 className="ideas-state-title">Unable to Load Proposals</h2>
-          <p className="ideas-state-desc">{error}</p>
-          <div className="ideas-state-actions">
-            <button
-              type="button"
-              onClick={() => {
-                if (user?.uid) {
-                  setLoading(true)
-                  setError(null)
-                  fetchUserIdeas(user.uid)
-                }
-              }}
-              className="btn btn-primary"
-            >
-              Try Again
-            </button>
-            <Link to="/ideas" className="btn btn-secondary">
-              Browse All Ideas
-            </Link>
-          </div>
-        </div>
-      ) : ideas.length === 0 ? (
-        /* Empty State */
-        <EmptyState
-          title="No Proposals Submitted Yet"
-          description="You haven't submitted any proposals to CampusVoice yet. Have a suggestion to improve facilities, academics, or student life?"
-          actionText="+ Submit Your First Idea"
-          actionLink="/submit"
-        />
       ) : (
-        /* Populated Dashboard */
-        <section aria-label="Student Proposal Dashboard">
-          {/* Overview Metrics Cards */}
-          <div className="dashboard-stats-grid">
-            <div className="dashboard-stat-card">
-              <div className="dashboard-stat-icon-wrapper" aria-hidden="true">
-                📋
-              </div>
-              <div className="dashboard-stat-content">
-                <span className="dashboard-stat-number">{totalSubmissions}</span>
-                <span className="dashboard-stat-label">
-                  {totalSubmissions === 1 ? 'Submitted Proposal' : 'Submitted Proposals'}
-                </span>
-              </div>
-            </div>
+        /* Authenticated View */
+        <>
+          {/* Moderator View Switcher (Exclusively available when isModerator === true) */}
+          {isModerator && (
+            <nav className="dashboard-tab-bar" role="tablist" aria-label="Dashboard Views">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'my-proposals'}
+                className={`dashboard-tab-btn ${activeTab === 'my-proposals' ? 'active' : ''}`}
+                onClick={() => setActiveTab('my-proposals')}
+              >
+                <span>👤 My Proposals</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'moderation-queue'}
+                className={`dashboard-tab-btn ${activeTab === 'moderation-queue' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('moderation-queue')
+                  if (queueIdeas.length === 0) {
+                    setQueueLoading(true)
+                    fetchQueueIdeas()
+                  }
+                }}
+              >
+                <span>🛡️ Moderation Queue</span>
+                <span className="moderator-badge-pill">Staff</span>
+              </button>
+            </nav>
+          )}
 
-            <div className="dashboard-stat-card">
-              <div className="dashboard-stat-icon-wrapper is-status" aria-hidden="true">
-                ⏳
+          {activeTab === 'moderation-queue' && isModerator ? (
+            /* Moderation Queue View (Restricted to Authorized Moderators) */
+            <section className="moderation-queue-container" aria-label="Staff Moderation Queue">
+              {/* Filter Bar */}
+              <div className="moderation-filter-bar" role="toolbar" aria-label="Filter queue by status">
+                <span className="moderation-filter-label">Filter Status:</span>
+                <button
+                  type="button"
+                  className={`moderation-filter-pill ${statusFilter === 'All' ? 'active' : ''}`}
+                  onClick={() => setStatusFilter('All')}
+                >
+                  All ({queueIdeas.length})
+                </button>
+                {IDEA_STATUSES.map((statusName) => {
+                  const count = queueIdeas.filter((i) => i.status === statusName).length
+                  return (
+                    <button
+                      key={statusName}
+                      type="button"
+                      className={`moderation-filter-pill ${statusFilter === statusName ? 'active' : ''}`}
+                      onClick={() => setStatusFilter(statusName)}
+                    >
+                      {statusName} ({count})
+                    </button>
+                  )
+                })}
               </div>
-              <div className="dashboard-stat-content">
-                <span className="dashboard-stat-number">{underReviewCount}</span>
-                <span className="dashboard-stat-label">Under Review</span>
-              </div>
-            </div>
 
-            <div className="dashboard-stat-card">
-              <div className="dashboard-stat-icon-wrapper is-votes" aria-hidden="true">
-                ▲
-              </div>
-              <div className="dashboard-stat-content">
-                <span className="dashboard-stat-number">
-                  {totalVotesReceived !== null ? totalVotesReceived : 'Unavailable'}
-                </span>
-                <span className="dashboard-stat-label">
-                  {totalVotesReceived !== null ? 'Total Upvotes Received' : 'Total Upvotes (Unavailable)'}
-                </span>
-              </div>
-            </div>
-          </div>
+              {/* Queue Content State */}
+              {queueLoading ? (
+                <div className="ideas-state-card" role="status" aria-live="polite">
+                  <div className="ideas-loading-spinner" aria-hidden="true" />
+                  <h2 className="ideas-state-title">Loading Moderation Queue...</h2>
+                  <p className="ideas-state-desc">Fetching campus proposals for review.</p>
+                </div>
+              ) : queueError ? (
+                <div className="ideas-state-card is-error" role="alert">
+                  <div className="badge not-found-badge">Database Error</div>
+                  <h2 className="ideas-state-title">Unable to Load Moderation Queue</h2>
+                  <p className="ideas-state-desc">{queueError}</p>
+                  <div className="ideas-state-actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQueueLoading(true)
+                        setQueueError(null)
+                        fetchQueueIdeas()
+                      }}
+                      className="btn btn-primary"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                </div>
+              ) : filteredQueueIdeas.length === 0 ? (
+                <EmptyState
+                  title="No Proposals in Queue"
+                  description={
+                    statusFilter === 'All'
+                      ? 'There are currently no proposals in the campus database.'
+                      : `There are currently no proposals matching the "${statusFilter}" status.`
+                  }
+                  actionText={statusFilter !== 'All' ? 'View All Statuses' : '+ Submit an Idea'}
+                  actionLink={statusFilter !== 'All' ? undefined : '/submit'}
+                  onClick={statusFilter !== 'All' ? () => setStatusFilter('All') : undefined}
+                />
+              ) : (
+                <div className="moderation-queue-list">
+                  {filteredQueueIdeas.map((idea) => {
+                    const currentSelected = pendingQueueStatus[idea.id] || idea.status
+                    const isUpdatingThis = updatingQueueId === idea.id
+                    const feedback = queueFeedback?.ideaId === idea.id ? queueFeedback : null
 
-          {/* User Proposals Section Header */}
-          <div className="dashboard-section-header">
-            <h2 className="dashboard-section-title">Your Submitted Proposals</h2>
-            <span className="dashboard-count-badge">
-              Showing {ideas.length} {ideas.length === 1 ? 'proposal' : 'proposals'}
-            </span>
-          </div>
+                    return (
+                      <article key={idea.id} className="moderation-item-card">
+                        <div className="moderation-item-header">
+                          <div>
+                            <h3 className="moderation-item-title">
+                              <Link to={`/ideas/${idea.id}`} className="moderation-item-title-link">
+                                {idea.title}
+                              </Link>
+                            </h3>
+                            <div className="moderation-item-meta">
+                              <span>📁 {idea.category}</span>
+                              <span>&bull;</span>
+                              <span>👤 {idea.authorName || 'Anonymous Student'}</span>
+                              <span>&bull;</span>
+                              <span>🕒 {idea.createdAt}</span>
+                            </div>
+                          </div>
 
-          {/* Grid of Idea Cards */}
-          <div className="ideas-grid">
-            {ideas.map((idea) => (
-              <IdeaCard key={idea.id} idea={idea} />
-            ))}
-          </div>
-        </section>
+                          <div className="idea-upvote-badge" aria-label={`${idea.upvoteCount ?? 0} upvotes`}>
+                            <span className="idea-upvote-icon" aria-hidden="true">▲</span>
+                            <span className="idea-upvote-count">
+                              {idea.upvoteCount !== null ? idea.upvoteCount : '—'}
+                            </span>
+                            <span className="idea-upvote-label">upvotes</span>
+                          </div>
+                        </div>
+
+                        <p className="moderation-item-body">{idea.description}</p>
+
+                        {feedback && (
+                          <div
+                            className={`moderator-item-feedback ${
+                              feedback.type === 'success' ? 'is-success' : 'is-error'
+                            }`}
+                            role={feedback.type === 'success' ? 'status' : 'alert'}
+                          >
+                            <span>{feedback.type === 'success' ? '✓' : '⚠️'} {feedback.message}</span>
+                          </div>
+                        )}
+
+                        <div className="moderation-item-footer">
+                          <div className="moderation-control-bar">
+                            <label htmlFor={`queue-status-${idea.id}`} className="moderation-select-label">
+                              Status:
+                            </label>
+                            <select
+                              id={`queue-status-${idea.id}`}
+                              className="moderation-status-dropdown"
+                              value={currentSelected}
+                              onChange={(e) => handleQueueStatusChange(idea.id, e.target.value)}
+                              disabled={isUpdatingThis}
+                            >
+                              {IDEA_STATUSES.map((statusName) => (
+                                <option key={statusName} value={statusName}>
+                                  {statusName} {statusName === idea.status ? '(Current)' : ''}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              type="button"
+                              className="btn btn-primary moderation-apply-btn"
+                              onClick={() => handleQueueStatusSubmit(idea.id, idea.status)}
+                              disabled={isUpdatingThis || currentSelected === idea.status}
+                            >
+                              {isUpdatingThis ? 'Updating...' : 'Update Status'}
+                            </button>
+                          </div>
+
+                          <Link to={`/ideas/${idea.id}`} className="idea-card-view-link">
+                            View Details &rarr;
+                          </Link>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          ) : (
+            /* Student Proposals View (Existing Phase 1 View) */
+            <>
+              {loading ? (
+                /* Loading Proposals */
+                <div className="ideas-state-card" role="status" aria-live="polite">
+                  <div className="ideas-loading-spinner" aria-hidden="true" />
+                  <h2 className="ideas-state-title">Loading Your Dashboard...</h2>
+                  <p className="ideas-state-desc">Fetching your submitted campus proposals from Firestore.</p>
+                </div>
+              ) : error ? (
+                /* Error State */
+                <div className="ideas-state-card is-error" role="alert">
+                  <div className="badge not-found-badge">Database Error</div>
+                  <h2 className="ideas-state-title">Unable to Load Proposals</h2>
+                  <p className="ideas-state-desc">{error}</p>
+                  <div className="ideas-state-actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (user?.uid) {
+                          setLoading(true)
+                          setError(null)
+                          fetchUserIdeas(user.uid)
+                        }
+                      }}
+                      className="btn btn-primary"
+                    >
+                      Try Again
+                    </button>
+                    <Link to="/ideas" className="btn btn-secondary">
+                      Browse All Ideas
+                    </Link>
+                  </div>
+                </div>
+              ) : ideas.length === 0 ? (
+                /* Empty State */
+                <EmptyState
+                  title="No Proposals Submitted Yet"
+                  description="You haven't submitted any proposals to CampusVoice yet. Have a suggestion to improve facilities, academics, or student life?"
+                  actionText="+ Submit Your First Idea"
+                  actionLink="/submit"
+                />
+              ) : (
+                /* Populated Dashboard */
+                <section aria-label="Student Proposal Dashboard">
+                  {/* Overview Metrics Cards */}
+                  <div className="dashboard-stats-grid">
+                    <div className="dashboard-stat-card">
+                      <div className="dashboard-stat-icon-wrapper" aria-hidden="true">
+                        📋
+                      </div>
+                      <div className="dashboard-stat-content">
+                        <span className="dashboard-stat-number">{totalSubmissions}</span>
+                        <span className="dashboard-stat-label">
+                          {totalSubmissions === 1 ? 'Submitted Proposal' : 'Submitted Proposals'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="dashboard-stat-card">
+                      <div className="dashboard-stat-icon-wrapper is-status" aria-hidden="true">
+                        ⏳
+                      </div>
+                      <div className="dashboard-stat-content">
+                        <span className="dashboard-stat-number">{underReviewCount}</span>
+                        <span className="dashboard-stat-label">Under Review</span>
+                      </div>
+                    </div>
+
+                    <div className="dashboard-stat-card">
+                      <div className="dashboard-stat-icon-wrapper is-votes" aria-hidden="true">
+                        ▲
+                      </div>
+                      <div className="dashboard-stat-content">
+                        <span className="dashboard-stat-number">
+                          {totalVotesReceived !== null ? totalVotesReceived : 'Unavailable'}
+                        </span>
+                        <span className="dashboard-stat-label">
+                          {totalVotesReceived !== null ? 'Total Upvotes Received' : 'Total Upvotes (Unavailable)'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* User Proposals Section Header */}
+                  <div className="dashboard-section-header">
+                    <h2 className="dashboard-section-title">Your Submitted Proposals</h2>
+                    <span className="dashboard-count-badge">
+                      Showing {ideas.length} {ideas.length === 1 ? 'proposal' : 'proposals'}
+                    </span>
+                  </div>
+
+                  {/* Grid of Idea Cards */}
+                  <div className="ideas-grid">
+                    {ideas.map((idea) => (
+                      <IdeaCard key={idea.id} idea={idea} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          )}
+        </>
       )}
 
       {/* Reusable Accessible Auth Modal */}
