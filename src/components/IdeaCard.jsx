@@ -1,7 +1,8 @@
 import { useNavigate, Link } from 'react-router-dom'
+import UpvoteButton from './UpvoteButton'
 import './IdeaCard.css'
 
-function IdeaCard({ idea }) {
+function IdeaCard({ idea, onVoteChange }) {
   const navigate = useNavigate()
 
   if (!idea) return null
@@ -70,20 +71,13 @@ function IdeaCard({ idea }) {
       </div>
 
       <div className="idea-card-footer">
-        <div
-          className="idea-upvote-badge"
-          aria-label={
-            isVoteCountUnavailable
-              ? 'Vote count unavailable'
-              : `${displayUpvotes} ${displayUpvotes === 1 ? 'upvote' : 'upvotes'}`
-          }
-        >
-          <span className="idea-upvote-icon" aria-hidden="true">▲</span>
-          <span className="idea-upvote-count">
-            {isVoteCountUnavailable ? 'Unavailable' : displayUpvotes}
-          </span>
-          {!isVoteCountUnavailable && <span className="idea-upvote-label">upvotes</span>}
-        </div>
+        <UpvoteButton
+          ideaId={id}
+          upvoteCount={displayUpvotes}
+          hasUpvoted={idea.hasUpvoted}
+          onVoteChange={onVoteChange}
+          variant="card"
+        />
 
         {id && (
           <Link
