@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getIdeaById, updateIdeaStatus, IDEA_STATUSES } from '../services/ideasService'
 import { useAuth } from '../context'
+import UpvoteButton from '../components/UpvoteButton'
 import './IdeaDetailPage.css'
 
 function IdeaDetailPage() {
   const { id } = useParams()
-  const { isModerator } = useAuth()
+  const { user, isModerator } = useAuth()
   const [idea, setIdea] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -25,7 +26,7 @@ function IdeaDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const fetchedIdea = await getIdeaById(id)
+      const fetchedIdea = await getIdeaById(id, user?.uid)
       setIdea(fetchedIdea)
     } catch (err) {
       console.error(`Failed to load idea "${id}" from Firestore:`, err)
@@ -44,7 +45,7 @@ function IdeaDetailPage() {
 
     async function fetchData() {
       try {
-        const fetchedIdea = await getIdeaById(id)
+        const fetchedIdea = await getIdeaById(id, user?.uid)
         if (!isCancelled) {
           setIdea(fetchedIdea)
         }
@@ -65,7 +66,25 @@ function IdeaDetailPage() {
     return () => {
       isCancelled = true
     }
-  }, [id])
+  }, [id, user?.uid])
+
+  const handleVoteChange = ({ hasUpvoted, upvoteCount }) => {
+    setIdea((prev) => {
+      if (!prev) return prev
+      const updatedCount =
+        typeof upvoteCount === 'number'
+          ? upvoteCount
+          : prev.upvoteCount !== null
+            ? (prev.upvoteCount || 0) + (hasUpvoted ? 1 : -1)
+            : null
+      return {
+        ...prev,
+        hasUpvoted,
+        upvoteCount: updatedCount,
+        upvotes: updatedCount,
+      }
+    })
+  }
 
   const getStatusClass = (statusName) => {
     switch (statusName) {
@@ -189,7 +208,7 @@ function IdeaDetailPage() {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <circle cx="11" cy="11" r="8" />
+              <circle cx="12" cy="12" r="10" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
               <line x1="8" y1="11" x2="14" y2="11" />
             </svg>
@@ -213,6 +232,16 @@ function IdeaDetailPage() {
       </div>
     )
   }
+
+  const isVoteCountUnavailable =
+    idea.upvoteCount === null || (idea.upvoteCount === undefined && idea.upvotes === null)
+  const displayUpvotes = isVoteCountUnavailable
+    ? null
+    : typeof idea.upvoteCount === 'number'
+      ? idea.upvoteCount
+      : typeof idea.upvotes === 'number'
+        ? idea.upvotes
+        : 0
 
   return (
     <div className="page-container idea-detail-page">
@@ -362,13 +391,26 @@ function IdeaDetailPage() {
               <span className="upvote-highlight-arrow" aria-hidden="true">▲</span>
               <div className="upvote-highlight-numbers">
                 <span className="upvote-number">
-                  {typeof idea.upvoteCount === 'number' ? idea.upvoteCount : (typeof idea.upvotes === 'number' ? idea.upvotes : 0)}
+                  {isVoteCountUnavailable ? 'Unavailable' : displayUpvotes}
                 </span>
                 <span className="upvote-word">
-                  {(typeof idea.upvoteCount === 'number' ? idea.upvoteCount : (typeof idea.upvotes === 'number' ? idea.upvotes : 0)) === 1 ? 'Student Upvote' : 'Student Upvotes'}
+                  {isVoteCountUnavailable
+                    ? 'Upvotes'
+                    : displayUpvotes === 1
+                      ? 'Student Upvote'
+                      : 'Student Upvotes'}
                 </span>
               </div>
             </div>
+
+            <UpvoteButton
+              ideaId={idea.id}
+              upvoteCount={displayUpvotes}
+              hasUpvoted={idea.hasUpvoted}
+              onVoteChange={handleVoteChange}
+              variant="detail"
+            />
+
             <p className="upvote-support-text">
               Community upvotes show campus administrators which ideas have the highest student backing.
             </p>

@@ -1,0 +1,205 @@
+/* Reusable Upvote Button Styles */
+.upvote-button-container {
+  display: inline-flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.upvote-container-detail {
+  width: 100%;
+}
+
+/* Base button styling */
+.upvote-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  text-decoration: none;
+  outline: none;
+}
+
+.upvote-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.upvote-btn:disabled {
+  cursor: not-allowed;
+}
+
+.upvote-btn.is-loading {
+  cursor: wait;
+  opacity: 0.8;
+}
+
+/* Spinner indicator */
+.upvote-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: upvote-spin 0.65s linear infinite;
+}
+
+@keyframes upvote-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Card Variant (compact for IdeaCard footer) */
+.upvote-btn-card {
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  min-height: 34px;
+}
+
+.upvote-btn-card:hover:not(:disabled) {
+  background-color: var(--color-primary-light);
+  border-color: #93c5fd;
+  color: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.upvote-btn-card .upvote-icon {
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.upvote-btn-card:hover:not(:disabled) .upvote-icon {
+  transform: translateY(-1px);
+}
+
+.upvote-btn-card .upvote-count {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.upvote-btn-card .upvote-text {
+  color: var(--color-text-secondary);
+  font-size: 0.775rem;
+  font-weight: 500;
+}
+
+/* Card Variant - Upvoted state */
+.upvote-btn-card.is-upvoted {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.15);
+}
+
+.upvote-btn-card.is-upvoted .upvote-icon {
+  color: var(--color-primary-dark);
+}
+
+.upvote-btn-card.is-upvoted .upvote-count {
+  color: var(--color-primary-dark);
+}
+
+.upvote-btn-card.is-upvoted .upvote-text {
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+.upvote-btn-card.is-upvoted:hover:not(:disabled) {
+  background-color: #dbeafe;
+  border-color: var(--color-primary-dark);
+  color: #1e40af;
+}
+
+/* Detail Variant (prominent sidebar CTA) */
+.upvote-btn-detail {
+  width: 100%;
+  gap: 0.65rem;
+  padding: 0.85rem 1.25rem;
+  font-size: 0.975rem;
+  font-weight: 700;
+  min-height: 48px;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border: 1px solid var(--color-primary);
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.35);
+  margin-top: 1rem;
+}
+
+.upvote-btn-detail:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.upvote-btn-detail .upvote-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.upvote-btn-detail .upvote-pill {
+  margin-left: auto;
+  background-color: rgba(255, 255, 255, 0.22);
+  padding: 0.15rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.825rem;
+  font-weight: 700;
+}
+
+/* Detail Variant - Upvoted state */
+.upvote-btn-detail.is-upvoted {
+  background-color: #ecfdf5;
+  border-color: #10b981;
+  color: #047857;
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.15);
+}
+
+.upvote-btn-detail.is-upvoted:hover:not(:disabled) {
+  background-color: #d1fae5;
+  border-color: #059669;
+  color: #065f46;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.upvote-btn-detail.is-upvoted .upvote-pill {
+  background-color: rgba(4, 120, 87, 0.12);
+  color: #047857;
+}
+
+/* Error message styling */
+.upvote-error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.775rem;
+  color: #b91c1c;
+  line-height: 1.35;
+  margin-top: 0.35rem;
+}
+
+.upvote-error-card {
+  max-width: 220px;
+}
+
+.upvote-error-detail {
+  width: 100%;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.6rem;
+}
