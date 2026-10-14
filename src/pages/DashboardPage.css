@@ -423,6 +423,75 @@
   font-size: 0.85rem;
 }
 
+.moderation-reject-btn {
+  padding: 0.45rem 0.95rem;
+  font-size: 0.85rem;
+  background-color: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.moderation-reject-btn:hover:not(:disabled) {
+  background-color: #ffe4e6;
+  color: #9f1239;
+  border-color: #fda4af;
+}
+
+.moderation-reject-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.moderation-delete-btn {
+  padding: 0.45rem 0.95rem;
+  font-size: 0.85rem;
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.moderation-delete-btn:hover:not(:disabled) {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.moderation-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.moderator-queue-feedback {
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.moderator-queue-feedback.is-success {
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.moderator-queue-feedback.is-error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
 .moderator-item-feedback {
   padding: 0.5rem 0.85rem;
   border-radius: var(--radius-md);

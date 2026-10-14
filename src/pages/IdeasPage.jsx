@@ -3,90 +3,10 @@ import { Link } from 'react-router-dom'
 import { getIdeas, IDEA_STATUSES } from '../services/ideasService'
 import { IDEA_CATEGORIES } from '../data/mockIdeas'
 import { useAuth } from '../context'
+import { filterAndSortIdeas } from '../utils/ideaFilters'
 import IdeaCard from '../components/IdeaCard'
 import EmptyState from '../components/EmptyState'
 import './IdeasPage.css'
-
-/**
- * Safely extracts a numeric epoch timestamp (in milliseconds) from an idea's
- * createdAtRaw or createdAt fields. Handles Firestore Timestamps, serialized timestamps,
- * JS Dates, and ISO/date strings, falling back to 0 for missing or invalid dates.
- *
- * @param {object} idea
- * @returns {number}
- */
-function getIdeaTimestampValue(idea) {
-  if (!idea) return 0
-
-  const raw = idea.createdAtRaw
-  if (raw) {
-    if (typeof raw.toMillis === 'function') {
-      try {
-        return raw.toMillis()
-      } catch {
-        // Fall through
-      }
-    }
-    if (typeof raw.toDate === 'function') {
-      try {
-        const d = raw.toDate()
-        if (d instanceof Date && !isNaN(d.getTime())) {
-          return d.getTime()
-        }
-      } catch {
-        // Fall through
-      }
-    }
-    if (typeof raw === 'object' && typeof raw.seconds === 'number') {
-      const nanos = typeof raw.nanoseconds === 'number' ? raw.nanoseconds / 1e6 : 0
-      return raw.seconds * 1000 + nanos
-    }
-    if (raw instanceof Date && !isNaN(raw.getTime())) {
-      return raw.getTime()
-    }
-    if (typeof raw === 'number' && !isNaN(raw)) {
-      return raw
-    }
-    if (typeof raw === 'string') {
-      const parsed = Date.parse(raw)
-      if (!isNaN(parsed)) {
-        return parsed
-      }
-    }
-  }
-
-  // Fallback to idea.createdAt if createdAtRaw is not parseable
-  if (idea.createdAt) {
-    if (idea.createdAt instanceof Date && !isNaN(idea.createdAt.getTime())) {
-      return idea.createdAt.getTime()
-    }
-    if (typeof idea.createdAt === 'string') {
-      const parsed = Date.parse(idea.createdAt)
-      if (!isNaN(parsed)) {
-        return parsed
-      }
-    }
-  }
-
-  return 0
-}
-
-/**
- * Safely extracts an upvote count from an idea, falling back gracefully to 0.
- *
- * @param {object} idea
- * @returns {number}
- */
-function getIdeaVoteCount(idea) {
-  if (!idea) return 0
-  if (typeof idea.upvoteCount === 'number' && !isNaN(idea.upvoteCount)) {
-    return idea.upvoteCount
-  }
-  if (typeof idea.upvotes === 'number' && !isNaN(idea.upvotes)) {
-    return idea.upvotes
-  }
-  return 0
-}
 
 function IdeasPage() {
   const { user } = useAuth()
@@ -179,49 +99,11 @@ function IdeasPage() {
 
   // Derive filtered and sorted ideas without mutating the original ideas state
   const filteredIdeas = useMemo(() => {
-    const trimmedQuery = searchQuery.trim().toLowerCase()
-
-    const matchingIdeas = ideas.filter((idea) => {
-      // 1. Search filter: matches either title or description case-insensitively
-      if (trimmedQuery) {
-        const titleMatch = (idea.title || '').toLowerCase().includes(trimmedQuery)
-        const descMatch = (idea.description || '').toLowerCase().includes(trimmedQuery)
-        if (!titleMatch && !descMatch) {
-          return false
-        }
-      }
-
-      // 2. Category filter
-      if (selectedCategory !== 'All' && idea.category !== selectedCategory) {
-        return false
-      }
-
-      // 3. Status filter
-      if (selectedStatus !== 'All' && idea.status !== selectedStatus) {
-        return false
-      }
-
-      return true
-    })
-
-    // 4. Local sorting
-    return matchingIdeas.sort((a, b) => {
-      if (sortBy === 'upvotes') {
-        const votesDiff = getIdeaVoteCount(b) - getIdeaVoteCount(a)
-        if (votesDiff !== 0) {
-          return votesDiff
-        }
-        // Tie-breaker: newest first
-        return getIdeaTimestampValue(b) - getIdeaTimestampValue(a)
-      }
-
-      // Default: 'newest'
-      const timeDiff = getIdeaTimestampValue(b) - getIdeaTimestampValue(a)
-      if (timeDiff !== 0) {
-        return timeDiff
-      }
-      // Tie-breaker: most upvoted
-      return getIdeaVoteCount(b) - getIdeaVoteCount(a)
+    return filterAndSortIdeas(ideas, {
+      searchQuery,
+      selectedCategory,
+      selectedStatus,
+      sortBy,
     })
   }, [ideas, searchQuery, selectedCategory, selectedStatus, sortBy])
 

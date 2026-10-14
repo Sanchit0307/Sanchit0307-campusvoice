@@ -28,6 +28,8 @@ function IdeaCard({ idea, onVoteChange }) {
         return 'status-accepted'
       case 'Implemented':
         return 'status-implemented'
+      case 'Rejected':
+        return 'status-rejected'
       case 'Submitted':
       default:
         return 'status-submitted'

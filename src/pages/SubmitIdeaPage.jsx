@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom'
 import { IDEA_CATEGORIES } from '../data/mockIdeas'
 import { createIdea } from '../services/ideasService'
 import { useAuth } from '../context'
+import {
+  validateIdeaSubmission,
+  getCounterClass,
+  TITLE_MAX_LENGTH,
+  DESC_MAX_LENGTH,
+} from '../utils/validation'
 import IdeaCard from '../components/IdeaCard'
 import './SubmitIdeaPage.css'
-
-const TITLE_MAX_LENGTH = 100
-const TITLE_MIN_LENGTH = 5
-const DESC_MAX_LENGTH = 500
-const DESC_MIN_LENGTH = 20
 
 function SubmitIdeaPage() {
   const { user } = useAuth()
@@ -46,33 +47,7 @@ function SubmitIdeaPage() {
     }
   }
 
-  const validate = () => {
-    const nextErrors = {}
-    const trimmedTitle = formData.title.trim()
-    const trimmedDesc = formData.description.trim()
-
-    if (!trimmedTitle) {
-      nextErrors.title = 'Please enter an idea title.'
-    } else if (trimmedTitle.length < TITLE_MIN_LENGTH) {
-      nextErrors.title = `Title must be at least ${TITLE_MIN_LENGTH} characters.`
-    } else if (trimmedTitle.length > TITLE_MAX_LENGTH) {
-      nextErrors.title = `Title cannot exceed ${TITLE_MAX_LENGTH} characters.`
-    }
-
-    if (!formData.category) {
-      nextErrors.category = 'Please select a category for your idea.'
-    }
-
-    if (!trimmedDesc) {
-      nextErrors.description = 'Please provide a description of your proposal.'
-    } else if (trimmedDesc.length < DESC_MIN_LENGTH) {
-      nextErrors.description = `Description must be at least ${DESC_MIN_LENGTH} characters to explain your proposal.`
-    } else if (trimmedDesc.length > DESC_MAX_LENGTH) {
-      nextErrors.description = `Description cannot exceed ${DESC_MAX_LENGTH} characters.`
-    }
-
-    return nextErrors
-  }
+  const validate = () => validateIdeaSubmission(formData, IDEA_CATEGORIES)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -127,12 +102,6 @@ function SubmitIdeaPage() {
     setIsSuccess(false)
     setIsSubmitting(false)
     setSubmitError(null)
-  }
-
-  const getCounterClass = (currentLength, maxLength) => {
-    if (currentLength >= maxLength) return 'counter-max'
-    if (currentLength >= maxLength * 0.85) return 'counter-warning'
-    return ''
   }
 
   return (

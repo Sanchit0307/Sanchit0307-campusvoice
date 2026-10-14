@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context'
 import './Navbar.css'
 
@@ -10,6 +10,7 @@ function Navbar() {
 
   const { user, loading, isConfigured, signInWithGoogle, signOutUser, isModerator } =
     useAuth()
+  const location = useLocation()
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((prev) => !prev)
@@ -140,11 +141,31 @@ function Navbar() {
           </NavLink>
           <NavLink
             to="/dashboard"
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+            end
+            className={({ isActive }) => {
+              const isModQueue =
+                location.pathname === '/moderation' ||
+                location.search.includes('tab=moderation-queue')
+              return isActive && !isModQueue ? 'nav-link active' : 'nav-link'
+            }}
             onClick={closeMobileMenu}
           >
             Dashboard
           </NavLink>
+          {isModerator && (
+            <NavLink
+              to="/dashboard?tab=moderation-queue"
+              className={({ isActive }) => {
+                const isModQueue =
+                  location.pathname === '/moderation' ||
+                  location.search.includes('tab=moderation-queue')
+                return isActive || isModQueue ? 'nav-link active' : 'nav-link'
+              }}
+              onClick={closeMobileMenu}
+            >
+              Moderation
+            </NavLink>
+          )}
 
           {/* Authentication Controls */}
           <div className="navbar-auth-section">

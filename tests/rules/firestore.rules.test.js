@@ -10,6 +10,7 @@ const CANONICAL_STATUSES = [
   'In Progress',
   'Accepted',
   'Implemented',
+  'Rejected',
 ]
 
 const VALID_IDEA_FIXTURE = {
@@ -142,6 +143,26 @@ describe('Firestore Security Rules Suite', () => {
       )
     })
 
+    it('3b. User with capitalized role "Moderator" or field "Role" can update and delete ideas', async () => {
+      await seedIdea('idea_alias_1')
+      await seedIdea('idea_alias_2')
+      await seedModerator('mod_cap', 'Moderator')
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('moderators').doc('mod_field').set({ Role: 'moderator' })
+      })
+
+      const modCapDb = testEnv.authenticatedContext('mod_cap').firestore()
+      const modFieldDb = testEnv.authenticatedContext('mod_field').firestore()
+
+      await assertSucceeds(
+        modCapDb.collection('ideas').doc('idea_alias_1').delete()
+      )
+
+      await assertSucceeds(
+        modFieldDb.collection('ideas').doc('idea_alias_2').delete()
+      )
+    })
+
     it('4. Moderator can update idea to each other valid canonical status', async () => {
       await seedModerator('mod_123', 'moderator')
       const modDb = testEnv.authenticatedContext('mod_123').firestore()
@@ -165,17 +186,10 @@ describe('Firestore Security Rules Suite', () => {
     // =========================================================================
     // Requirement 5: Non-canonical status values are rejected
     // =========================================================================
-    it('5. Moderator cannot set an invalid status such as Rejected or Archived', async () => {
+    it('5. Moderator cannot set an invalid status such as Archived or Deleted', async () => {
       await seedIdea('idea_1')
       await seedModerator('mod_123', 'moderator')
       const modDb = testEnv.authenticatedContext('mod_123').firestore()
-
-      await assertFails(
-        modDb.collection('ideas').doc('idea_1').update({
-          status: 'Rejected',
-          updatedAt: serverTimestamp(),
-        })
-      )
 
       await assertFails(
         modDb.collection('ideas').doc('idea_1').update({
@@ -186,7 +200,37 @@ describe('Firestore Security Rules Suite', () => {
 
       await assertFails(
         modDb.collection('ideas').doc('idea_1').update({
+          status: 'Deleted',
+          updatedAt: serverTimestamp(),
+        })
+      )
+
+      await assertFails(
+        modDb.collection('ideas').doc('idea_1').update({
           status: 'Pending',
+          updatedAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('5b. Moderator can reject an idea; ordinary student cannot', async () => {
+      await seedIdea('idea_reject')
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+
+      // Student cannot reject an idea
+      await assertFails(
+        studentDb.collection('ideas').doc('idea_reject').update({
+          status: 'Rejected',
+          updatedAt: serverTimestamp(),
+        })
+      )
+
+      // Authorized moderator can reject an idea
+      await assertSucceeds(
+        modDb.collection('ideas').doc('idea_reject').update({
+          status: 'Rejected',
           updatedAt: serverTimestamp(),
         })
       )
@@ -343,7 +387,7 @@ describe('Firestore Security Rules Suite', () => {
   // Requirement 12: Idea deletion denied for all clients
   // =========================================================================
   describe('Idea Deletion Security', () => {
-    it('12. Clients cannot delete an idea (unauthenticated, author, or moderator)', async () => {
+    it('12. Only authorized moderators can delete an idea; denied for guests, authors, and students', async () => {
       await seedIdea('idea_1', { authorId: 'student_123' })
       await seedModerator('mod_123', 'moderator')
 
@@ -361,8 +405,27 @@ describe('Firestore Security Rules Suite', () => {
       // Other student cannot delete
       await assertFails(otherStudentDb.collection('ideas').doc('idea_1').delete())
 
-      // Moderator cannot delete
-      await assertFails(modDb.collection('ideas').doc('idea_1').delete())
+      // Authorized moderator CAN delete
+      await assertSucceeds(modDb.collection('ideas').doc('idea_1').delete())
+    })
+
+    it('12b. Authorized moderator can remove vote documents under an idea; ordinary students cannot delete another user vote', async () => {
+      await seedIdea('idea_votes')
+      await seedVote('idea_votes', 'voter_1')
+      await seedModerator('mod_123', 'moderator')
+
+      const studentDb = testEnv.authenticatedContext('student_2').firestore()
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // Ordinary student cannot delete another user's vote
+      await assertFails(
+        studentDb.collection('ideas').doc('idea_votes').collection('votes').doc('voter_1').delete()
+      )
+
+      // Authorized moderator CAN delete the vote document during idea cleanup
+      await assertSucceeds(
+        modDb.collection('ideas').doc('idea_votes').collection('votes').doc('voter_1').delete()
+      )
     })
   })
 
