@@ -1,23 +1,35 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams, useLocation } from 'react-router-dom'
 import { useAuth } from '../context'
 import {
   getUserIdeas,
   getIdeas,
   updateIdeaStatus,
+  rejectIdea,
+  deleteIdea,
   IDEA_STATUSES,
 } from '../services/ideasService'
 import IdeaCard from '../components/IdeaCard'
 import EmptyState from '../components/EmptyState'
 import SignInPromptModal from '../components/SignInPromptModal'
+import DeleteConfirmationModal from '../components/DeleteConfirmationModal'
 import './DashboardPage.css'
 import './IdeasPage.css'
 
 function DashboardPage() {
   const { user, loading: authLoading, signInWithGoogle, isConfigured, isModerator } = useAuth()
 
-  // Tab State for authorized moderators
-  const [activeTab, setActiveTab] = useState('my-proposals')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  const tabFromQuery = searchParams.get('tab')
+  const wantsModeration =
+    tabFromQuery === 'moderation-queue' || location.pathname === '/moderation'
+
+  // Tab State for authorized moderators (protected: only 'moderation-queue' if isModerator is true)
+  const [overrideTab, setOverrideTab] = useState(null)
+  const activeTab = isModerator
+    ? (overrideTab ?? (wantsModeration ? 'moderation-queue' : 'my-proposals'))
+    : 'my-proposals'
 
   // Student Dashboard State
   const [ideas, setIdeas] = useState([])
@@ -35,6 +47,11 @@ function DashboardPage() {
   const [pendingQueueStatus, setPendingQueueStatus] = useState({})
   const [updatingQueueId, setUpdatingQueueId] = useState(null)
   const [queueFeedback, setQueueFeedback] = useState(null)
+
+  // Moderator Deletion State
+  const [ideaPendingDeletion, setIdeaPendingDeletion] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteModalError, setDeleteModalError] = useState(null)
 
   const activeUserIdRef = useRef(null)
 
@@ -175,6 +192,85 @@ function DashboardPage() {
       })
     } finally {
       setUpdatingQueueId(null)
+    }
+  }
+
+  const handleRejectIdea = async (ideaId) => {
+    if (!ideaId || updatingQueueId || isDeleting) return
+
+    setUpdatingQueueId(ideaId)
+    setQueueFeedback(null)
+
+    try {
+      await rejectIdea(ideaId)
+
+      setQueueIdeas((prev) =>
+        prev.map((item) =>
+          item.id === ideaId ? { ...item, status: 'Rejected', updatedAt: 'Just now' } : item
+        )
+      )
+
+      setIdeas((prev) =>
+        prev.map((item) =>
+          item.id === ideaId ? { ...item, status: 'Rejected', updatedAt: 'Just now' } : item
+        )
+      )
+
+      setQueueFeedback({
+        type: 'success',
+        message: 'Proposal status updated to "Rejected".',
+        ideaId,
+      })
+    } catch (err) {
+      console.error(`Failed to reject proposal ${ideaId}:`, err)
+      setQueueFeedback({
+        type: 'error',
+        message: err.message || 'Failed to reject proposal.',
+        ideaId,
+      })
+    } finally {
+      setUpdatingQueueId(null)
+    }
+  }
+
+  const handleOpenDeleteModal = (idea) => {
+    setIdeaPendingDeletion(idea)
+    setDeleteModalError(null)
+  }
+
+  const handleCloseDeleteModal = () => {
+    if (isDeleting) return
+    setIdeaPendingDeletion(null)
+    setDeleteModalError(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!ideaPendingDeletion?.id || isDeleting) return
+
+    const targetId = ideaPendingDeletion.id
+    const targetTitle = ideaPendingDeletion.title || 'Proposal'
+    setIsDeleting(true)
+    setDeleteModalError(null)
+
+    try {
+      await deleteIdea(targetId)
+
+      // Immediately remove from active lists
+      setQueueIdeas((prev) => prev.filter((item) => item.id !== targetId))
+      setIdeas((prev) => prev.filter((item) => item.id !== targetId))
+
+      setQueueFeedback({
+        type: 'success',
+        message: `Proposal "${targetTitle}" and all associated votes were permanently removed.`,
+        ideaId: null,
+      })
+
+      setIdeaPendingDeletion(null)
+    } catch (err) {
+      console.error(`Failed to delete proposal ${targetId}:`, err)
+      setDeleteModalError(err.message || 'Failed to delete proposal. Please try again.')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -339,7 +435,10 @@ function DashboardPage() {
                 role="tab"
                 aria-selected={activeTab === 'my-proposals'}
                 className={`dashboard-tab-btn ${activeTab === 'my-proposals' ? 'active' : ''}`}
-                onClick={() => setActiveTab('my-proposals')}
+                onClick={() => {
+                  setOverrideTab('my-proposals')
+                  setSearchParams({})
+                }}
               >
                 <span>👤 My Proposals</span>
               </button>
@@ -349,7 +448,8 @@ function DashboardPage() {
                 aria-selected={activeTab === 'moderation-queue'}
                 className={`dashboard-tab-btn ${activeTab === 'moderation-queue' ? 'active' : ''}`}
                 onClick={() => {
-                  setActiveTab('moderation-queue')
+                  setOverrideTab('moderation-queue')
+                  setSearchParams({ tab: 'moderation-queue' })
                   if (queueIdeas.length === 0) {
                     setQueueLoading(true)
                     fetchQueueIdeas()
@@ -389,6 +489,17 @@ function DashboardPage() {
                   )
                 })}
               </div>
+
+              {queueFeedback && !queueFeedback.ideaId && (
+                <div
+                  className={`moderator-queue-feedback ${
+                    queueFeedback.type === 'success' ? 'is-success' : 'is-error'
+                  }`}
+                  role={queueFeedback.type === 'success' ? 'status' : 'alert'}
+                >
+                  <span>{queueFeedback.type === 'success' ? '✓' : '⚠️'} {queueFeedback.message}</span>
+                </div>
+              )}
 
               {/* Queue Content State */}
               {queueLoading ? (
@@ -498,9 +609,31 @@ function DashboardPage() {
                               type="button"
                               className="btn btn-primary moderation-apply-btn"
                               onClick={() => handleQueueStatusSubmit(idea.id, idea.status)}
-                              disabled={isUpdatingThis || currentSelected === idea.status}
+                              disabled={isUpdatingThis || currentSelected === idea.status || isDeleting}
                             >
                               {isUpdatingThis ? 'Updating...' : 'Update Status'}
+                            </button>
+
+                            {idea.status !== 'Rejected' && (
+                              <button
+                                type="button"
+                                className="moderation-reject-btn"
+                                onClick={() => handleRejectIdea(idea.id)}
+                                disabled={isUpdatingThis || isDeleting}
+                                aria-label={`Reject proposal: ${idea.title}`}
+                              >
+                                Reject
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              className="moderation-delete-btn"
+                              onClick={() => handleOpenDeleteModal(idea)}
+                              disabled={isUpdatingThis || isDeleting}
+                              aria-label={`Remove proposal: ${idea.title}`}
+                            >
+                              Remove
                             </button>
                           </div>
 
@@ -626,6 +759,16 @@ function DashboardPage() {
         onClose={() => setIsSignInModalOpen(false)}
         title="Sign In to Student Dashboard"
         description="Sign in with your student Google account to track the status of your submitted campus proposals and see community engagement."
+      />
+
+      {/* Confirmation Modal for Permanent Idea Removal */}
+      <DeleteConfirmationModal
+        isOpen={Boolean(ideaPendingDeletion)}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        ideaTitle={ideaPendingDeletion?.title || ''}
+        isDeleting={isDeleting}
+        error={deleteModalError}
       />
     </div>
   )

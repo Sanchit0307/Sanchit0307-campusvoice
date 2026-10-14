@@ -88,6 +88,12 @@
   border: 1px solid #a7f3d0;
 }
 
+.status-rejected {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
 .idea-card-body {
   display: flex;
   flex-direction: column;

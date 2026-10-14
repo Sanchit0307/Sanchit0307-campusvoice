@@ -96,6 +96,8 @@ function IdeaDetailPage() {
         return 'status-accepted'
       case 'Implemented':
         return 'status-implemented'
+      case 'Rejected':
+        return 'status-rejected'
       case 'Submitted':
       default:
         return 'status-submitted'
@@ -112,6 +114,8 @@ function IdeaDetailPage() {
         return 'This proposal was approved and prioritized for upcoming campus planning and implementation.'
       case 'Implemented':
         return 'This campus enhancement has been successfully delivered and is active for the student community.'
+      case 'Rejected':
+        return 'This proposal was reviewed and declined by campus administration.'
       case 'Submitted':
       default:
         return 'This proposal has been posted to the campus portal and is gathering community visibility and feedback.'

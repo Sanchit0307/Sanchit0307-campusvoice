@@ -11,6 +11,8 @@ import {
   serverTimestamp,
   getCountFromServer,
   runTransaction,
+  deleteDoc,
+  writeBatch,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../firebase/firebase'
 
@@ -24,6 +26,7 @@ export const IDEA_STATUSES = Object.freeze([
   'In Progress',
   'Accepted',
   'Implemented',
+  'Rejected',
 ])
 
 /**
@@ -564,6 +567,14 @@ export async function updateIdea(id, updateData) {
   }
 }
 
+const maskUid = (id) => {
+  if (!id || typeof id !== 'string') return 'none'
+  const str = id.trim()
+  return str.length > 8 ? `${str.slice(0, 4)}...${str.slice(-4)}` : `${str.slice(0, 2)}***`
+}
+
+let checkIsModeratorCounter = 0
+
 /**
  * Checks whether the given user has an authorized moderator role.
  * Queries the 'moderators/{userId}' document and verifies role === 'moderator'.
@@ -572,20 +583,96 @@ export async function updateIdea(id, updateData) {
  * @returns {Promise<boolean>}
  */
 export async function checkIsModerator(userId) {
+  const checkId = ++checkIsModeratorCounter
+  const maskedUid = maskUid(userId)
+
+  if (import.meta.env.DEV) {
+    console.info(`[AuthDiag #${checkId}] Moderator check ATTEMPTED`, {
+      maskedUid,
+      firebaseConfigured: isFirebaseConfigured(),
+      dbInitialized: Boolean(db),
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'not-set',
+    })
+  }
+
   if (!userId || typeof userId !== 'string' || !userId.trim()) {
+    if (import.meta.env.DEV) {
+      console.info(`[AuthDiag #${checkId}] Check aborted: empty or non-string userId.`)
+    }
     return false
   }
 
   if (!isFirebaseConfigured() || !db) {
+    if (import.meta.env.DEV) {
+      console.warn(`[AuthDiag #${checkId}] Check aborted: Firebase or Firestore not configured.`)
+    }
     return false
   }
 
+  const cleanUserId = userId.trim()
+  const modRef = doc(db, MODERATORS_COLLECTION, cleanUserId)
+
+  const verifySnapshot = (snap) => {
+    if (!snap || typeof snap.exists !== 'function' || !snap.exists()) {
+      if (import.meta.env.DEV) {
+        console.info(`[AuthDiag #${checkId}] Document does NOT exist at ${MODERATORS_COLLECTION}/${maskedUid}`)
+      }
+      return false
+    }
+    const data = (typeof snap.data === 'function' ? snap.data() : null) || {}
+    const rawRole = data.role ?? data.Role
+    const normalizedRole =
+      typeof rawRole === 'string' ? rawRole.trim().toLowerCase() : ''
+    const roleMatched = normalizedRole === 'moderator'
+    if (import.meta.env.DEV) {
+      console.info(`[AuthDiag #${checkId}] Document exists at ${MODERATORS_COLLECTION}/${maskedUid}`, {
+        rawRole,
+        roleMatched,
+      })
+    }
+    return roleMatched
+  }
+
   try {
-    const modRef = doc(db, MODERATORS_COLLECTION, userId.trim())
     const modSnap = await getDoc(modRef)
-    return Boolean(modSnap.exists() && modSnap.data()?.role === 'moderator')
+    const result = verifySnapshot(modSnap)
+    if (import.meta.env.DEV) {
+      console.info(`[AuthDiag #${checkId}] Moderator check COMPLETED: result=${result}`)
+    }
+    return result
   } catch (error) {
-    console.warn(`Error verifying moderator status for user ${userId}:`, error)
+    if (import.meta.env.DEV) {
+      console.warn(`[AuthDiag #${checkId}] Firestore getDoc error:`, {
+        code: error?.code,
+        message: error?.message,
+      })
+    }
+
+    // If permission-denied occurs during early auth token propagation, retry once after a short delay
+    if (error?.code === 'permission-denied') {
+      try {
+        if (import.meta.env.DEV) {
+          console.info(`[AuthDiag #${checkId}] Retrying getDoc in 350ms due to permission-denied...`)
+        }
+        await new Promise((resolve) => setTimeout(resolve, 350))
+        const retrySnap = await getDoc(modRef)
+        const retryResult = verifySnapshot(retrySnap)
+        if (import.meta.env.DEV) {
+          console.info(`[AuthDiag #${checkId}] Retry COMPLETED: result=${retryResult}`)
+        }
+        return retryResult
+      } catch (retryError) {
+        if (import.meta.env.DEV) {
+          console.warn(`[AuthDiag #${checkId}] Retry FAILED:`, {
+            code: retryError?.code,
+            message: retryError?.message,
+          })
+        }
+        return false
+      }
+    }
+
+    console.warn(`Error verifying moderator status for user ${cleanUserId}:`, error)
     return false
   }
 }
@@ -621,6 +708,110 @@ export async function updateIdeaStatus(ideaId, newStatus) {
   } catch (error) {
     console.error(`Error updating status for idea ${ideaId} to ${newStatus}:`, error)
     throw handleFirestoreError(error, `Failed to update status for idea ${ideaId}`)
+  }
+}
+
+/**
+ * Convenience helper for authorized moderators to reject an idea proposal.
+ * Updates the proposal's status in Firestore to 'Rejected' while preserving document data.
+ *
+ * @param {string} ideaId - Document ID of the idea to reject.
+ * @returns {Promise<void>}
+ */
+export async function rejectIdea(ideaId) {
+  return updateIdeaStatus(ideaId, 'Rejected')
+}
+
+/**
+ * Permanently deletes an idea proposal and all associated vote documents in ideas/{ideaId}/votes.
+ * Restricted to verified moderators by Firestore Security Rules.
+ *
+ * Note on Subcollection Deletion Limitation:
+ * In Cloud Firestore, client-side parent document deletion does NOT automatically delete subcollections.
+ * This client helper cleans up all vote documents in chunks before removing the parent document.
+ * For production scale with thousands of subcollection documents, a trusted backend Cloud Function
+ * (e.g., recursiveDelete via Firebase Admin SDK) is recommended.
+ *
+ * @param {string} ideaId - Document ID of the idea to delete.
+ * @returns {Promise<void>}
+ */
+export async function deleteIdea(ideaId) {
+  assertFirebaseConfigured()
+
+  if (!ideaId || typeof ideaId !== 'string' || !ideaId.trim()) {
+    throw new Error('Valid Idea ID is required to remove an idea proposal.')
+  }
+
+  const cleanIdeaId = ideaId.trim()
+  const maskedIdeaId = cleanIdeaId.length > 8
+    ? `${cleanIdeaId.slice(0, 4)}...${cleanIdeaId.slice(-4)}`
+    : `${cleanIdeaId.slice(0, 2)}***`
+
+  let currentStep = 'init'
+
+  try {
+    // 1. Fetch all vote documents in ideas/{ideaId}/votes
+    currentStep = 'read_votes_subcollection'
+    if (import.meta.env.DEV) {
+      console.info(`[DeleteDiag] Step 1: Reading votes for idea ${maskedIdeaId}...`)
+    }
+    const votesCol = collection(db, IDEAS_COLLECTION, cleanIdeaId, VOTES_SUBCOLLECTION)
+    const votesSnapshot = await getDocs(votesCol)
+    if (import.meta.env.DEV) {
+      console.info(`[DeleteDiag] Step 1 SUCCEEDED: Found ${votesSnapshot.size} votes.`)
+    }
+
+    // 2. Delete all votes in batches of up to 400
+    if (!votesSnapshot.empty) {
+      currentStep = 'delete_votes_batch'
+      if (import.meta.env.DEV) {
+        console.info(`[DeleteDiag] Step 2: Batch deleting ${votesSnapshot.size} vote documents...`)
+      }
+      const batchSize = 400
+      let batch = writeBatch(db)
+      let count = 0
+
+      for (const voteDoc of votesSnapshot.docs) {
+        batch.delete(voteDoc.ref)
+        count++
+        if (count >= batchSize) {
+          await batch.commit()
+          batch = writeBatch(db)
+          count = 0
+        }
+      }
+
+      if (count > 0) {
+        await batch.commit()
+      }
+      if (import.meta.env.DEV) {
+        console.info(`[DeleteDiag] Step 2 SUCCEEDED: All votes removed.`)
+      }
+    } else {
+      if (import.meta.env.DEV) {
+        console.info(`[DeleteDiag] Step 2 SKIPPED: Subcollection has 0 votes.`)
+      }
+    }
+
+    // 3. Delete the parent idea document
+    currentStep = 'delete_parent_idea_document'
+    if (import.meta.env.DEV) {
+      console.info(`[DeleteDiag] Step 3: Deleting parent idea document ${maskedIdeaId}...`)
+    }
+    const ideaDocRef = doc(db, IDEAS_COLLECTION, cleanIdeaId)
+    await deleteDoc(ideaDocRef)
+    if (import.meta.env.DEV) {
+      console.info(`[DeleteDiag] Step 3 SUCCEEDED: Idea ${maskedIdeaId} successfully deleted.`)
+    }
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.error(`[DeleteDiag] FAILED at step '${currentStep}':`, {
+        code: error?.code,
+        message: error?.message,
+      })
+    }
+    console.error(`Error deleting idea document ${cleanIdeaId} at step '${currentStep}':`, error)
+    throw handleFirestoreError(error, `Failed to delete idea proposal ${cleanIdeaId}`)
   }
 }
 

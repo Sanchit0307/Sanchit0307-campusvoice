@@ -11,7 +11,14 @@ service cloud.firestore {
     function isModerator() {
       return isAuthenticated()
         && exists(/databases/$(database)/documents/moderators/$(request.auth.uid))
-        && get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.role == 'moderator';
+        && (
+          ('role' in get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data
+            && (get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.role == 'moderator'
+                || get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.role == 'Moderator'))
+          || ('Role' in get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data
+            && (get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.Role == 'moderator'
+                || get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.Role == 'Moderator'))
+        );
     }
 
     // ===============================================================
@@ -37,8 +44,8 @@ service cloud.firestore {
       // 3. Allow only authorized moderators to update idea workflow status
       allow update: if isModerator() && isValidStatusUpdate();
 
-      // 4. Deny client-side deletes completely
-      allow delete: if false;
+      // 4. Allow only authorized moderators to remove ideas permanently
+      allow delete: if isModerator();
 
       // Validation function for incoming idea documents on proposal creation
       function isValidIdea() {
@@ -97,7 +104,8 @@ service cloud.firestore {
           'Under Review',
           'In Progress',
           'Accepted',
-          'Implemented'
+          'Implemented',
+          'Rejected'
         ];
 
         return diff.affectedKeys().hasOnly(['status', 'updatedAt'])
@@ -120,8 +128,8 @@ service cloud.firestore {
         // 3. Deny client updates completely (votes are toggle-only, cannot be edited)
         allow update: if false;
 
-        // 4. Authenticated user can ONLY delete their own vote document (toggle unvote)
-        allow delete: if request.auth != null && request.auth.uid == userId;
+        // 4. Authenticated user can delete their own vote document (toggle unvote), or an authorized moderator cleaning up idea votes
+        allow delete: if (request.auth != null && request.auth.uid == userId) || isModerator();
 
         // Validation function for incoming vote documents
         function isValidVote(ownerId) {
