@@ -77,7 +77,7 @@
 
 .ideas-search-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .ideas-search-input::placeholder {
@@ -94,7 +94,7 @@
   height: 1.75rem;
   border-radius: 50%;
   border: none;
-  background-color: #f1f5f9;
+  background-color: var(--color-border-subtle);
   color: var(--color-text-secondary);
   font-size: 1.15rem;
   line-height: 1;
@@ -103,7 +103,7 @@
 }
 
 .ideas-clear-search-btn:hover {
-  background-color: #e2e8f0;
+  background-color: var(--color-border);
   color: var(--color-text-primary);
 }
 
@@ -150,7 +150,7 @@
 
 .ideas-select:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .ideas-reset-group {
@@ -424,3 +424,10 @@
   gap: 0.75rem;
   margin-top: 0.5rem;
 }
+
+/* Dark Theme Overrides */
+[data-theme="dark"] .ideas-state-card.is-error {
+  border-color: rgba(239, 68, 68, 0.35);
+  background-color: rgba(239, 68, 68, 0.12);
+}
+

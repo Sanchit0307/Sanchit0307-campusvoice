@@ -12,6 +12,7 @@ vi.mock('firebase/firestore', async (importOriginal) => {
     deleteDoc: vi.fn(),
     updateDoc: vi.fn(),
     writeBatch: vi.fn(),
+    runTransaction: vi.fn(),
     serverTimestamp: vi.fn(() => ({ _methodName: 'serverTimestamp' })),
   }
 })
@@ -75,13 +76,22 @@ describe('moderationService Unit Suite', () => {
   })
 
   describe('rejectIdea Service Method', () => {
-    it('updates idea status to "Rejected" with serverTimestamp', async () => {
-      firestore.updateDoc.mockResolvedValueOnce()
+    it('updates idea status to "Rejected" with serverTimestamp via atomic transaction', async () => {
+      const mockTx = {
+        get: vi.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({ status: 'Submitted', authorId: 'student-1', title: 'Test Idea' }),
+        }),
+        update: vi.fn(),
+        set: vi.fn(),
+      }
+      firestore.runTransaction.mockImplementation(async (_db, callback) => callback(mockTx))
 
       await rejectIdea('idea-to-reject')
 
-      expect(firestore.updateDoc).toHaveBeenCalledTimes(1)
-      const callArgs = firestore.updateDoc.mock.calls[0]
+      expect(firestore.runTransaction).toHaveBeenCalledTimes(1)
+      expect(mockTx.update).toHaveBeenCalledTimes(1)
+      const callArgs = mockTx.update.mock.calls[0]
       expect(callArgs[1]).toMatchObject({
         status: 'Rejected',
       })
@@ -89,7 +99,7 @@ describe('moderationService Unit Suite', () => {
 
     it('throws validation error if ideaId is empty', async () => {
       await expect(rejectIdea('')).rejects.toThrow('Valid Idea ID is required')
-      expect(firestore.updateDoc).not.toHaveBeenCalled()
+      expect(firestore.runTransaction).not.toHaveBeenCalled()
     })
   })
 })

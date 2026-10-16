@@ -14,7 +14,12 @@ import {
   deleteDoc,
   writeBatch,
 } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '../firebase/firebase'
+import { auth, db, isFirebaseConfigured } from '../firebase/firebase'
+import {
+  NOTIFICATIONS_COLLECTION,
+  NOTIFICATION_TYPES,
+  generateStatusNotificationMessage,
+} from './notificationService'
 
 const IDEAS_COLLECTION = 'ideas'
 const VOTES_SUBCOLLECTION = 'votes'
@@ -699,12 +704,84 @@ export async function updateIdeaStatus(ideaId, newStatus) {
     )
   }
 
+  const cleanIdeaId = ideaId.trim()
+  const docRef = doc(db, IDEAS_COLLECTION, cleanIdeaId)
+
   try {
-    const docRef = doc(db, IDEAS_COLLECTION, ideaId.trim())
-    await updateDoc(docRef, {
-      status: newStatus,
-      updatedAt: serverTimestamp(),
+    let result = { updated: false }
+
+    await runTransaction(db, async (transaction) => {
+      // 1. Transactional read of existing idea document
+      const ideaSnap = await transaction.get(docRef)
+      if (!ideaSnap.exists()) {
+        const err = new Error('Requested idea document could not be found.')
+        err.code = 'not-found'
+        throw err
+      }
+
+      const currentData = ideaSnap.data() || {}
+      const previousStatus = currentData.status
+
+      // 2. Idempotency: if already at target status, do nothing (safe under repeated clicks/retries)
+      if (previousStatus === newStatus) {
+        result = { updated: false, unchanged: true, status: newStatus }
+        return
+      }
+
+      // 3. Atomically update idea workflow status
+      transaction.update(docRef, {
+        status: newStatus,
+        updatedAt: serverTimestamp(),
+      })
+
+      // 4. Derive deterministic transition identifier for idempotency
+      // Incorporates cleanIdeaId, transition pair, and prior timestamp
+      const prevTimestamp =
+        currentData.updatedAt?.toMillis?.() ||
+        (typeof currentData.updatedAt?.seconds === 'number'
+          ? currentData.updatedAt.seconds * 1000
+          : null) ||
+        currentData.createdAt?.toMillis?.() ||
+        (typeof currentData.createdAt?.seconds === 'number'
+          ? currentData.createdAt.seconds * 1000
+          : null) ||
+        'init'
+
+      const sanitizedPrev = (previousStatus || 'Submitted').replace(/\s+/g, '_')
+      const sanitizedNew = newStatus.replace(/\s+/g, '_')
+      const notifDocId = `${cleanIdeaId}_${sanitizedPrev}_to_${sanitizedNew}_${prevTimestamp}`
+
+      const authorId = currentData.authorId
+      const currentUserId = auth?.currentUser?.uid
+
+      // Only notify original student author (skip if anonymous or self-action)
+      const shouldNotifyAuthor =
+        authorId &&
+        typeof authorId === 'string' &&
+        authorId.trim() &&
+        (!currentUserId || currentUserId !== authorId.trim())
+
+      if (shouldNotifyAuthor) {
+        const notifRef = doc(db, NOTIFICATIONS_COLLECTION, notifDocId)
+        const message = generateStatusNotificationMessage(currentData.title, newStatus)
+
+        transaction.set(notifRef, {
+          recipientId: authorId.trim(),
+          ideaId: cleanIdeaId,
+          ideaTitle: (currentData.title || 'Untitled Proposal').slice(0, 100),
+          type: NOTIFICATION_TYPES.IDEA_STATUS_CHANGED,
+          message,
+          previousStatus: previousStatus || 'Submitted',
+          newStatus,
+          isRead: false,
+          createdAt: serverTimestamp(),
+        })
+      }
+
+      result = { updated: true, previousStatus, newStatus }
     })
+
+    return result
   } catch (error) {
     console.error(`Error updating status for idea ${ideaId} to ${newStatus}:`, error)
     throw handleFirestoreError(error, `Failed to update status for idea ${ideaId}`)

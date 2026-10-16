@@ -1,20 +1,33 @@
 :root {
   --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
   
-  /* Color Palette */
+  /* Brand & Accent Palette */
   --color-primary: #3b82f6;
   --color-primary-dark: #2563eb;
   --color-primary-light: #eff6ff;
+  --color-primary-border: #bfdbfe;
+  --color-primary-text: #2563eb;
   --color-accent: #6366f1;
   --color-success: #10b981;
   
+  /* Surfaces & Backgrounds */
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+
+  /* Typography Colors */
   --color-text-primary: #0f172a;
   --color-text-secondary: #475569;
   --color-text-muted: #94a3b8;
+
+  /* Borders & Dividers */
   --color-border: #e2e8f0;
   --color-border-subtle: #f1f5f9;
+  --color-border-hover: #cbd5e1;
+
+  /* Focus & Interactive */
+  --color-focus-ring: rgba(59, 130, 246, 0.25);
   
   /* Elevation & Shape */
   --radius-sm: 6px;
@@ -23,6 +36,42 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Brand & Accent Palette */
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-primary-light: rgba(59, 130, 246, 0.15);
+  --color-primary-border: rgba(96, 165, 250, 0.3);
+  --color-primary-text: #93c5fd;
+  --color-accent: #818cf8;
+  --color-success: #34d399;
+
+  /* Surfaces & Backgrounds */
+  --color-bg: #0b1120;
+  --color-surface: #1e293b;
+  --color-surface-hover: #243247;
+
+  /* Typography Colors */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Borders & Dividers */
+  --color-border: #334155;
+  --color-border-subtle: #1e293b;
+  --color-border-hover: #475569;
+
+  /* Focus & Interactive */
+  --color-focus-ring: rgba(96, 165, 250, 0.35);
+
+  /* Elevation & Shape */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
 }
 
 *, *::before, *::after {

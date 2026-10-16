@@ -86,6 +86,25 @@ describe('Firestore Security Rules Suite', () => {
     })
   }
 
+  // Helper to seed a notification document
+  async function seedNotification(notifId = 'notif_1', overrideData = {}) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore()
+      await db.collection('notifications').doc(notifId).set({
+        recipientId: 'student_123',
+        ideaId: 'idea_1',
+        ideaTitle: 'Renovate Library Study Spaces',
+        type: 'idea_status_changed',
+        message: 'Your idea "Renovate Library Study Spaces" is now under review.',
+        previousStatus: 'Submitted',
+        newStatus: 'Under Review',
+        isRead: false,
+        createdAt: Timestamp.now(),
+        ...overrideData,
+      })
+    })
+  }
+
   // =========================================================================
   // Requirement 1 & 2: Status updates denied for unauthenticated & ordinary users
   // =========================================================================
@@ -798,6 +817,275 @@ describe('Firestore Security Rules Suite', () => {
         modDb.collection('ideas').doc('idea_1').update({
           status: 'Under Review',
           updatedAt: arbitraryPastDate,
+        })
+      )
+    })
+  })
+
+  // =========================================================================
+  // Requirement 20: Notifications Collection Security
+  // =========================================================================
+  describe('Notifications Collection Security', () => {
+    it('20a. Authenticated student can read only their own notifications', async () => {
+      await seedNotification('notif_student_123', { recipientId: 'student_123' })
+
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+      const docSnap = await assertSucceeds(
+        studentDb.collection('notifications').doc('notif_student_123').get()
+      )
+      assert.equal(docSnap.exists, true)
+    })
+
+    it('20b. Authenticated student cannot read another student\'s notification', async () => {
+      await seedNotification('notif_student_123', { recipientId: 'student_123' })
+
+      const otherStudentDb = testEnv.authenticatedContext('other_student_456').firestore()
+      await assertFails(
+        otherStudentDb.collection('notifications').doc('notif_student_123').get()
+      )
+    })
+
+    it('20c. Unauthenticated visitor cannot read notifications', async () => {
+      await seedNotification('notif_student_123', { recipientId: 'student_123' })
+
+      const guestDb = testEnv.unauthenticatedContext().firestore()
+      await assertFails(
+        guestDb.collection('notifications').doc('notif_student_123').get()
+      )
+    })
+
+    it('20d. Authenticated student can mark their own notification as read', async () => {
+      await seedNotification('notif_read_test', { recipientId: 'student_123', isRead: false })
+
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+      await assertSucceeds(
+        studentDb.collection('notifications').doc('notif_read_test').update({
+          isRead: true,
+        })
+      )
+    })
+
+    it('20e. Authenticated student cannot modify immutable fields (e.g., recipientId or message)', async () => {
+      await seedNotification('notif_immutable', { recipientId: 'student_123', isRead: false })
+
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+
+      // Cannot change message
+      await assertFails(
+        studentDb.collection('notifications').doc('notif_immutable').update({
+          message: 'Tampered notification message',
+        })
+      )
+
+      // Cannot reassign recipientId
+      await assertFails(
+        studentDb.collection('notifications').doc('notif_immutable').update({
+          recipientId: 'someone_else',
+          isRead: true,
+        })
+      )
+
+      // Cannot change ideaId
+      await assertFails(
+        studentDb.collection('notifications').doc('notif_immutable').update({
+          ideaId: 'idea_tampered',
+          isRead: true,
+        })
+      )
+    })
+
+    it('20f. Authenticated student cannot mark another student\'s notification as read', async () => {
+      await seedNotification('notif_victim', { recipientId: 'victim_student', isRead: false })
+
+      const attackerDb = testEnv.authenticatedContext('attacker_student').firestore()
+      await assertFails(
+        attackerDb.collection('notifications').doc('notif_victim').update({
+          isRead: true,
+        })
+      )
+    })
+
+    it('20g. Ordinary student cannot create notifications (forgery defense)', async () => {
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+
+      await assertFails(
+        studentDb.collection('notifications').add({
+          recipientId: 'student_123',
+          ideaId: 'idea_1',
+          ideaTitle: 'Renovate Library Study Spaces',
+          type: 'idea_status_changed',
+          message: 'Forged status notification',
+          previousStatus: 'Submitted',
+          newStatus: 'Approved',
+          isRead: false,
+          createdAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('20h. Authorized moderator can create legitimate notification matching schema', async () => {
+      await seedIdea('idea_1', { authorId: 'student_123', title: 'Renovate Library Study Spaces' })
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      await assertSucceeds(
+        modDb.collection('notifications').add({
+          recipientId: 'student_123',
+          ideaId: 'idea_1',
+          ideaTitle: 'Renovate Library Study Spaces',
+          type: 'idea_status_changed',
+          message: 'Your idea "Renovate Library Study Spaces" has been approved.',
+          previousStatus: 'Under Review',
+          newStatus: 'Accepted',
+          isRead: false,
+          createdAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('20i. Moderator cannot create notification with invalid schema', async () => {
+      await seedIdea('idea_1', { authorId: 'student_123', title: 'Renovate Library Study Spaces' })
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // Invalid status
+      await assertFails(
+        modDb.collection('notifications').add({
+          recipientId: 'student_123',
+          ideaId: 'idea_1',
+          ideaTitle: 'Renovate Library Study Spaces',
+          type: 'idea_status_changed',
+          message: 'Your idea has been archived.',
+          previousStatus: 'Under Review',
+          newStatus: 'Archived',
+          isRead: false,
+          createdAt: serverTimestamp(),
+        })
+      )
+
+      // Missing required field 'newStatus'
+      await assertFails(
+        modDb.collection('notifications').add({
+          recipientId: 'student_123',
+          ideaId: 'idea_1',
+          ideaTitle: 'Renovate Library Study Spaces',
+          type: 'idea_status_changed',
+          message: 'Your idea has been approved.',
+          previousStatus: 'Under Review',
+          isRead: false,
+          createdAt: serverTimestamp(),
+        })
+      )
+
+      // Extra unexpected field
+      await assertFails(
+        modDb.collection('notifications').add({
+          recipientId: 'student_123',
+          ideaId: 'idea_1',
+          ideaTitle: 'Renovate Library Study Spaces',
+          type: 'idea_status_changed',
+          message: 'Your idea has been approved.',
+          previousStatus: 'Under Review',
+          newStatus: 'Accepted',
+          isRead: false,
+          createdAt: serverTimestamp(),
+          extraForgedField: 'injected payload',
+        })
+      )
+    })
+
+    it('20j. Authenticated student can delete their own notification, but not another student\'s notification', async () => {
+      await seedNotification('notif_to_delete', { recipientId: 'student_123' })
+
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+      const otherDb = testEnv.authenticatedContext('other_student').firestore()
+
+      // Other student cannot delete
+      await assertFails(otherDb.collection('notifications').doc('notif_to_delete').delete())
+
+      // Recipient student can delete
+      await assertSucceeds(studentDb.collection('notifications').doc('notif_to_delete').delete())
+    })
+
+    it('20k. Moderator cannot create notification for a non-existent idea document', async () => {
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // Idea 'ghost_idea' does NOT exist
+      await assertFails(
+        modDb.collection('notifications').add({
+          recipientId: 'student_123',
+          ideaId: 'ghost_idea',
+          ideaTitle: 'Non-Existent Proposal',
+          type: 'idea_status_changed',
+          message: 'Your idea "Non-Existent Proposal" has been approved.',
+          previousStatus: 'Under Review',
+          newStatus: 'Accepted',
+          isRead: false,
+          createdAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('20l. Moderator cannot create notification where recipientId does not match idea authorId', async () => {
+      await seedIdea('idea_real', { authorId: 'legitimate_author', title: 'Solar Panels on Gym' })
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // Trying to target 'innocent_victim' instead of 'legitimate_author'
+      await assertFails(
+        modDb.collection('notifications').add({
+          recipientId: 'innocent_victim',
+          ideaId: 'idea_real',
+          ideaTitle: 'Solar Panels on Gym',
+          type: 'idea_status_changed',
+          message: 'Your idea "Solar Panels on Gym" has been approved.',
+          previousStatus: 'Under Review',
+          newStatus: 'Accepted',
+          isRead: false,
+          createdAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('20m. Moderator cannot create notification with forged idea title that mismatches the actual idea', async () => {
+      await seedIdea('idea_real', { authorId: 'student_123', title: 'Real Proposal Title' })
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // Trying to put forged title 'Forged Fake Title'
+      await assertFails(
+        modDb.collection('notifications').add({
+          recipientId: 'student_123',
+          ideaId: 'idea_real',
+          ideaTitle: 'Forged Fake Title',
+          type: 'idea_status_changed',
+          message: 'Your idea "Forged Fake Title" has been approved.',
+          previousStatus: 'Under Review',
+          newStatus: 'Accepted',
+          isRead: false,
+          createdAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('20n. Moderator cannot create notification when previousStatus equals newStatus (unchanged)', async () => {
+      await seedIdea('idea_real', { authorId: 'student_123', title: 'Real Proposal Title' })
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // previousStatus === newStatus ('Under Review' == 'Under Review')
+      await assertFails(
+        modDb.collection('notifications').add({
+          recipientId: 'student_123',
+          ideaId: 'idea_real',
+          ideaTitle: 'Real Proposal Title',
+          type: 'idea_status_changed',
+          message: 'Your idea "Real Proposal Title" is now under review.',
+          previousStatus: 'Under Review',
+          newStatus: 'Under Review',
+          isRead: false,
+          createdAt: serverTimestamp(),
         })
       )
     })

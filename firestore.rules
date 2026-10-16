@@ -145,5 +145,76 @@ service cloud.firestore {
         }
       }
     }
+
+    // ===============================================================
+    // NOTIFICATIONS COLLECTION: notifications/{notificationId}
+    // ===============================================================
+    match /notifications/{notificationId} {
+      // 1. Authenticated students can read ONLY their own notifications
+      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+
+      // 2. Only authorized moderators can create notifications through the moderation workflow
+      allow create: if isModerator() && isValidNotification();
+
+      // 3. Authenticated students can only update the 'isRead' field of their own notifications
+      allow update: if isAuthenticated()
+        && resource.data.recipientId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])
+        && request.resource.data.isRead is bool;
+
+      // 4. Authenticated students can delete their own notifications
+      allow delete: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+
+      function isValidNotification() {
+        let data = request.resource.data;
+        let requiredKeys = [
+          'recipientId',
+          'ideaId',
+          'ideaTitle',
+          'type',
+          'message',
+          'previousStatus',
+          'newStatus',
+          'isRead',
+          'createdAt'
+        ];
+        let allowedStatuses = [
+          'Submitted',
+          'Under Review',
+          'In Progress',
+          'Accepted',
+          'Implemented',
+          'Rejected'
+        ];
+
+        let ideaPath = /databases/$(database)/documents/ideas/$(data.ideaId);
+
+        return data.keys().hasAll(requiredKeys)
+          && data.keys().hasOnly(requiredKeys)
+          && data.recipientId is string
+          && data.recipientId.size() > 0
+          && data.recipientId.size() <= 128
+          && data.ideaId is string
+          && data.ideaId.size() > 0
+          && data.ideaId.size() <= 128
+          && data.ideaTitle is string
+          && data.ideaTitle.size() > 0
+          && data.ideaTitle.size() <= 100
+          && data.type == 'idea_status_changed'
+          && data.message is string
+          && data.message.size() >= 5
+          && data.message.size() <= 300
+          && data.previousStatus in allowedStatuses
+          && data.newStatus in allowedStatuses
+          && data.previousStatus != data.newStatus
+          && data.isRead == false
+          && data.createdAt is timestamp
+          // Cross-check with referenced idea document
+          && exists(ideaPath)
+          && get(ideaPath).data.authorId == data.recipientId
+          && get(ideaPath).data.title == data.ideaTitle;
+      }
+    }
   }
 }
+

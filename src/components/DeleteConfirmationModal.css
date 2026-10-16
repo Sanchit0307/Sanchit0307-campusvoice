@@ -13,8 +13,8 @@
 
 .delete-modal-dialog {
   position: relative;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg, 12px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   width: 100%;
@@ -33,7 +33,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: 1.5rem;
   line-height: 1;
   display: flex;
@@ -44,8 +44,8 @@
 }
 
 .delete-modal-close-btn:hover:not(:disabled) {
-  background-color: #f1f5f9;
-  color: #0f172a;
+  background-color: var(--color-border-subtle);
+  color: var(--color-text-primary);
 }
 
 .delete-modal-close-btn:disabled {
@@ -68,19 +68,19 @@
 .delete-modal-title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-primary);
   margin-bottom: 0.75rem;
 }
 
 .delete-modal-description {
   font-size: 0.95rem;
   line-height: 1.5;
-  color: #475569;
+  color: var(--color-text-secondary);
   margin-bottom: 1.5rem;
 }
 
 .delete-modal-target-title {
-  color: #0f172a;
+  color: var(--color-text-primary);
   word-break: break-word;
 }
 
@@ -121,3 +121,16 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Dark Theme Overrides */
+[data-theme="dark"] .delete-modal-icon-badge {
+  background-color: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+[data-theme="dark"] .delete-modal-error {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+

@@ -134,8 +134,8 @@
 
 /* Status Info Card */
 .status-info-card {
-  background-color: #f8fafc;
-  border-color: #e2e8f0;
+  background-color: var(--color-bg);
+  border-color: var(--color-border);
 }
 
 .status-info-header {
@@ -191,8 +191,8 @@
 
 /* Upvote Highlight Box */
 .upvote-summary-card {
-  background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
-  border-color: #bfdbfe;
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-surface) 100%);
+  border-color: var(--color-primary-border, #bfdbfe);
 }
 
 .upvote-highlight {
@@ -213,7 +213,7 @@
   border-radius: var(--radius-md);
   font-size: 1.25rem;
   font-weight: bold;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--color-primary-border, #bfdbfe);
 }
 
 .upvote-highlight-numbers {
@@ -422,13 +422,13 @@
 .moderator-card-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #1e1b4b;
+  color: var(--color-text-primary);
   margin: 0 0 0.25rem;
 }
 
 .moderator-card-subtitle {
   font-size: 0.875rem;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   line-height: 1.5;
   margin: 0;
 }
@@ -470,7 +470,7 @@
 .moderator-status-label {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-text-secondary);
 }
 
 .moderator-status-select {
@@ -478,8 +478,8 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text-primary);
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
   cursor: pointer;
@@ -488,10 +488,30 @@
 
 .moderator-status-select:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .moderator-update-btn {
   padding: 0.6rem 1.25rem;
   font-size: 0.9rem;
 }
+
+/* Dark Theme Overrides */
+[data-theme="dark"] .moderator-control-card {
+  border-color: rgba(99, 102, 241, 0.35);
+  background-color: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .moderator-alert.is-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .moderator-alert.is-error {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+

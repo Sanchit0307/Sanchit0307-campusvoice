@@ -165,9 +165,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  background-color: #ffffff;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0.75rem 1.4rem;
   font-size: 0.95rem;
@@ -178,8 +178,8 @@
 }
 
 .dashboard-google-signin-btn:hover:not(:disabled) {
-  background-color: #f9fafb;
-  border-color: #9ca3af;
+  background-color: var(--color-surface-hover, var(--color-bg));
+  border-color: var(--color-border-hover, #9ca3af);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
 }
@@ -334,7 +334,7 @@
 
 .moderation-item-card:hover {
   box-shadow: var(--shadow-md);
-  border-color: #cbd5e1;
+  border-color: var(--color-border-hover, #cbd5e1);
 }
 
 .moderation-item-header {
@@ -399,7 +399,7 @@
 .moderation-select-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-text-secondary);
 }
 
 .moderation-status-dropdown {
@@ -407,8 +407,8 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-primary);
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
   cursor: pointer;
@@ -416,6 +416,7 @@
 
 .moderation-status-dropdown:focus {
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
 .moderation-apply-btn {
@@ -528,3 +529,45 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Dark Theme Overrides */
+[data-theme="dark"] .dashboard-stat-icon-wrapper.is-status {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .dashboard-stat-icon-wrapper.is-votes {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+[data-theme="dark"] .moderation-reject-btn {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .moderation-reject-btn:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+[data-theme="dark"] .moderator-item-feedback.is-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .moderator-item-feedback.is-error {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .moderator-badge-pill {
+  color: #a5b4fc;
+  background-color: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+

@@ -1,0 +1,72 @@
+/* Theme Toggle Button Styles */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  outline: none;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--color-surface-hover, var(--color-bg));
+  border-color: var(--color-border-hover);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.theme-toggle-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.theme-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: transform 0.25s ease;
+}
+
+.theme-toggle-btn:hover .theme-icon-wrapper {
+  transform: rotate(12deg);
+}
+
+.theme-icon-moon {
+  color: var(--color-text-secondary);
+}
+
+.theme-toggle-btn:hover .theme-icon-moon {
+  color: var(--color-primary);
+}
+
+.theme-icon-sun {
+  color: #fbbf24;
+}
+
+.theme-toggle-btn:hover .theme-icon-sun {
+  color: #f59e0b;
+}
+
+.theme-toggle-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-left: 0.5rem;
+}

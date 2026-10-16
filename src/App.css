@@ -26,9 +26,9 @@
   padding: 0.35rem 0.85rem;
   font-size: 0.825rem;
   font-weight: 600;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text, var(--color-primary-dark));
   background-color: var(--color-primary-light);
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--color-primary-border, #bfdbfe);
   border-radius: 9999px;
   margin-bottom: 1rem;
   letter-spacing: 0.02em;
@@ -113,8 +113,8 @@
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-bg);
-  border-color: #cbd5e1;
+  background-color: var(--color-surface-hover, var(--color-bg));
+  border-color: var(--color-border-hover, #cbd5e1);
 }
 
 /* Shell Cards */

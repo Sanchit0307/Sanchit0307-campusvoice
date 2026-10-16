@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context'
+import ThemeToggle from './ThemeToggle'
+import NotificationBell from './NotificationBell'
 import './Navbar.css'
 
 function Navbar() {
@@ -98,19 +100,6 @@ function Navbar() {
           <span className="brand-name">CampusVoice</span>
           <span className="brand-tag">BuildLab &apos;26</span>
         </Link>
-
-        {/* Mobile Menu Hamburger Button */}
-        <button
-          type="button"
-          className="mobile-menu-btn"
-          onClick={toggleMobileMenu}
-          aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          aria-expanded={isMobileMenuOpen}
-        >
-          <span className={`hamburger-bar ${isMobileMenuOpen ? 'open' : ''}`}></span>
-          <span className={`hamburger-bar ${isMobileMenuOpen ? 'open' : ''}`}></span>
-          <span className={`hamburger-bar ${isMobileMenuOpen ? 'open' : ''}`}></span>
-        </button>
 
         {/* Navigation Links */}
         <nav
@@ -273,6 +262,23 @@ function Navbar() {
             </Link>
           </div>
         </nav>
+
+        {/* Right Controls: Notification Bell, Theme Toggle & Mobile Menu Hamburger */}
+        <div className="navbar-right-controls">
+          {user && <NotificationBell key={user.uid} />}
+          <ThemeToggle />
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            onClick={toggleMobileMenu}
+            aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={isMobileMenuOpen}
+          >
+            <span className={`hamburger-bar ${isMobileMenuOpen ? 'open' : ''}`}></span>
+            <span className={`hamburger-bar ${isMobileMenuOpen ? 'open' : ''}`}></span>
+            <span className={`hamburger-bar ${isMobileMenuOpen ? 'open' : ''}`}></span>
+          </button>
+        </div>
       </div>
 
       {/* Dismissible Feedback Banner for Auth Errors */}
