@@ -105,6 +105,27 @@ describe('Firestore Security Rules Suite', () => {
     })
   }
 
+  // Helper to seed a status history document
+  async function seedStatusHistory(ideaId = 'idea_1', historyId = 'hist_1', overrideData = {}) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore()
+      await db
+        .collection('ideas')
+        .doc(ideaId)
+        .collection('statusHistory')
+        .doc(historyId)
+        .set({
+          ideaId,
+          previousStatus: 'Submitted',
+          newStatus: 'Under Review',
+          changedAt: Timestamp.now(),
+          changedBy: 'mod_123',
+          description: 'Status changed from Submitted to Under Review',
+          ...overrideData,
+        })
+    })
+  }
+
   // =========================================================================
   // Requirement 1 & 2: Status updates denied for unauthenticated & ordinary users
   // =========================================================================
@@ -1087,6 +1108,474 @@ describe('Firestore Security Rules Suite', () => {
           isRead: false,
           createdAt: serverTimestamp(),
         })
+      )
+    })
+  })
+
+  // =========================================================================
+  // Requirement 21: Status History Subcollection Security (ideas/{ideaId}/statusHistory)
+  // =========================================================================
+  describe('Status History Subcollection Security (ideas/{ideaId}/statusHistory)', () => {
+    it('21a. Unauthenticated visitor and authenticated student can read statusHistory subcollection', async () => {
+      await seedIdea('idea_1')
+      await seedStatusHistory('idea_1', 'hist_1')
+
+      const guestDb = testEnv.unauthenticatedContext().firestore()
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+
+      await assertSucceeds(
+        guestDb.collection('ideas').doc('idea_1').collection('statusHistory').doc('hist_1').get()
+      )
+      await assertSucceeds(
+        studentDb.collection('ideas').doc('idea_1').collection('statusHistory').doc('hist_1').get()
+      )
+    })
+
+    it('21b. Authorized moderator can create legitimate status transition history event', async () => {
+      await seedIdea('idea_1')
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      await assertSucceeds(
+        modDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'idea_1',
+            previousStatus: 'Submitted',
+            newStatus: 'Under Review',
+            changedAt: serverTimestamp(),
+            changedBy: 'mod_123',
+            description: 'Status changed from Submitted to Under Review',
+          })
+      )
+    })
+
+    it('21c. Ordinary student cannot create status transition history event (forgery defense)', async () => {
+      await seedIdea('idea_1')
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+
+      await assertFails(
+        studentDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'idea_1',
+            previousStatus: 'Submitted',
+            newStatus: 'Accepted',
+            changedAt: serverTimestamp(),
+            changedBy: 'student_123',
+            description: 'Forged status promotion',
+          })
+      )
+    })
+
+    it('21d. Unauthenticated visitor cannot create status transition history event', async () => {
+      await seedIdea('idea_1')
+      const guestDb = testEnv.unauthenticatedContext().firestore()
+
+      await assertFails(
+        guestDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'idea_1',
+            previousStatus: 'Submitted',
+            newStatus: 'Under Review',
+            changedAt: serverTimestamp(),
+            changedBy: null,
+            description: 'Unauthenticated status transition',
+          })
+      )
+    })
+
+    it('21e. Legitimate atomic idea-plus-history creation succeeds for authenticated user', async () => {
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+      const batch = studentDb.batch()
+      const ideaRef = studentDb.collection('ideas').doc('idea_atomic_auth')
+      const historyRef = ideaRef.collection('statusHistory').doc('idea_atomic_auth_init')
+
+      batch.set(ideaRef, {
+        title: 'Renovate Library Study Spaces',
+        description: 'Add more power outlets and ergonomic chairs to the second floor study rooms.',
+        category: 'Facilities',
+        authorId: 'student_123',
+        authorName: 'Alex Student',
+        status: 'Submitted',
+        upvoteCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      batch.set(historyRef, {
+        ideaId: 'idea_atomic_auth',
+        previousStatus: null,
+        newStatus: 'Submitted',
+        changedAt: serverTimestamp(),
+        changedBy: 'student_123',
+        description: 'Proposal submitted',
+      })
+
+      await assertSucceeds(batch.commit())
+    })
+
+    it('21f. Legitimate atomic idea-plus-history creation succeeds for unauthenticated visitor', async () => {
+      const guestDb = testEnv.unauthenticatedContext().firestore()
+      const batch = guestDb.batch()
+      const ideaRef = guestDb.collection('ideas').doc('idea_atomic_anon')
+      const historyRef = ideaRef.collection('statusHistory').doc('idea_atomic_anon_init')
+
+      batch.set(ideaRef, {
+        title: 'Outdoor Solar Charging Stations',
+        description: 'Install weatherproof solar benches across the central campus quad for charging devices.',
+        category: 'Sustainability',
+        authorId: null,
+        authorName: 'Anonymous Student',
+        status: 'Submitted',
+        upvoteCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      batch.set(historyRef, {
+        ideaId: 'idea_atomic_anon',
+        previousStatus: null,
+        newStatus: 'Submitted',
+        changedAt: serverTimestamp(),
+        changedBy: null,
+        description: 'Proposal submitted',
+      })
+
+      await assertSucceeds(batch.commit())
+    })
+
+    it('21g. Cannot append a fabricated initial history event to an existing idea (authenticated student)', async () => {
+      await seedIdea('idea_existing_auth', { authorId: 'student_123' })
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+
+      await assertFails(
+        studentDb
+          .collection('ideas')
+          .doc('idea_existing_auth')
+          .collection('statusHistory')
+          .doc('fabricated_init')
+          .set({
+            ideaId: 'idea_existing_auth',
+            previousStatus: null,
+            newStatus: 'Submitted',
+            changedAt: serverTimestamp(),
+            changedBy: 'student_123',
+            description: 'Fabricated initial history on existing idea',
+          })
+      )
+    })
+
+    it('21h. Cannot append a fabricated initial history event to an existing idea (unauthenticated visitor)', async () => {
+      await seedIdea('idea_existing_anon', { authorId: null })
+      const guestDb = testEnv.unauthenticatedContext().firestore()
+
+      await assertFails(
+        guestDb
+          .collection('ideas')
+          .doc('idea_existing_anon')
+          .collection('statusHistory')
+          .doc('fabricated_init_anon')
+          .set({
+            ideaId: 'idea_existing_anon',
+            previousStatus: null,
+            newStatus: 'Submitted',
+            changedAt: serverTimestamp(),
+            changedBy: null,
+            description: 'Fabricated initial history on existing idea',
+          })
+      )
+    })
+
+    it('21i. Atomic creation fails if initial history changedBy mismatches parent idea authorId', async () => {
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+      const batch = studentDb.batch()
+      const ideaRef = studentDb.collection('ideas').doc('idea_mismatch_author')
+      const historyRef = ideaRef.collection('statusHistory').doc('idea_mismatch_author_init')
+
+      batch.set(ideaRef, {
+        title: 'Renovate Library Study Spaces',
+        description: 'Add more power outlets and ergonomic chairs to the second floor study rooms.',
+        category: 'Facilities',
+        authorId: 'student_123',
+        authorName: 'Alex Student',
+        status: 'Submitted',
+        upvoteCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      batch.set(historyRef, {
+        ideaId: 'idea_mismatch_author',
+        previousStatus: null,
+        newStatus: 'Submitted',
+        changedAt: serverTimestamp(),
+        changedBy: 'other_student_999',
+        description: 'Proposal submitted',
+      })
+
+      await assertFails(batch.commit())
+    })
+
+    it('21j. Atomic creation fails if initial history newStatus is other than "Submitted"', async () => {
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+      const batch = studentDb.batch()
+      const ideaRef = studentDb.collection('ideas').doc('idea_bad_status')
+      const historyRef = ideaRef.collection('statusHistory').doc('idea_bad_status_init')
+
+      batch.set(ideaRef, {
+        title: 'Renovate Library Study Spaces',
+        description: 'Add more power outlets and ergonomic chairs to the second floor study rooms.',
+        category: 'Facilities',
+        authorId: 'student_123',
+        authorName: 'Alex Student',
+        status: 'Submitted',
+        upvoteCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      batch.set(historyRef, {
+        ideaId: 'idea_bad_status',
+        previousStatus: null,
+        newStatus: 'Accepted',
+        changedAt: serverTimestamp(),
+        changedBy: 'student_123',
+        description: 'Forged instant acceptance',
+      })
+
+      await assertFails(batch.commit())
+    })
+
+    it('21k. Initial history event cannot be created for a non-existent parent idea without creating it atomically', async () => {
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+
+      await assertFails(
+        studentDb
+          .collection('ideas')
+          .doc('ghost_idea')
+          .collection('statusHistory')
+          .doc('ghost_idea_init')
+          .set({
+            ideaId: 'ghost_idea',
+            previousStatus: null,
+            newStatus: 'Submitted',
+            changedAt: serverTimestamp(),
+            changedBy: 'student_123',
+            description: 'Proposal submitted for ghost idea',
+          })
+      )
+    })
+
+    it('21l. Moderator cannot create status transition history event where previousStatus equals newStatus', async () => {
+      await seedIdea('idea_1')
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // previousStatus === newStatus ('Under Review' == 'Under Review')
+      await assertFails(
+        modDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'idea_1',
+            previousStatus: 'Under Review',
+            newStatus: 'Under Review',
+            changedAt: serverTimestamp(),
+            changedBy: 'mod_123',
+            description: 'Duplicate unchanged status event',
+          })
+      )
+    })
+
+    it('21m. Moderator cannot spoof changedBy (must match authenticated UID)', async () => {
+      await seedIdea('idea_1')
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // Trying to claim another moderator or student made the change
+      await assertFails(
+        modDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'idea_1',
+            previousStatus: 'Submitted',
+            newStatus: 'In Progress',
+            changedAt: serverTimestamp(),
+            changedBy: 'other_admin_999',
+            description: 'Status changed from Submitted to In Progress',
+          })
+      )
+    })
+
+    it('21n. Client cannot supply arbitrary past or future timestamp (must match serverTimestamp)', async () => {
+      await seedIdea('idea_1')
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // Future timestamp
+      const futureTime = Timestamp.fromDate(new Date(Date.now() + 86400000))
+      await assertFails(
+        modDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'idea_1',
+            previousStatus: 'Submitted',
+            newStatus: 'Under Review',
+            changedAt: futureTime,
+            changedBy: 'mod_123',
+            description: 'Status changed from Submitted to Under Review',
+          })
+      )
+    })
+
+    it('21o. Moderator cannot create history event with non-canonical status', async () => {
+      await seedIdea('idea_1')
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      await assertFails(
+        modDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'idea_1',
+            previousStatus: 'Submitted',
+            newStatus: 'FastTracked',
+            changedAt: serverTimestamp(),
+            changedBy: 'mod_123',
+            description: 'Status changed from Submitted to FastTracked',
+          })
+      )
+    })
+
+    it('21p. History events are strictly immutable: updates denied for both moderator and student', async () => {
+      await seedIdea('idea_1')
+      await seedModerator('mod_123', 'moderator')
+      await seedStatusHistory('idea_1', 'hist_immutable')
+
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+
+      // Update denied for student
+      await assertFails(
+        studentDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .doc('hist_immutable')
+          .update({
+            description: 'Tampered description',
+          })
+      )
+
+      // Update denied even for moderator
+      await assertFails(
+        modDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .doc('hist_immutable')
+          .update({
+            description: 'Tampered description by moderator',
+          })
+      )
+    })
+
+    it('21q. Ordinary student cannot delete history events, but authorized moderator can delete for cleanup', async () => {
+      await seedIdea('idea_1')
+      await seedModerator('mod_123', 'moderator')
+      await seedStatusHistory('idea_1', 'hist_to_delete')
+
+      const studentDb = testEnv.authenticatedContext('student_123').firestore()
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // Student cannot delete
+      await assertFails(
+        studentDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .doc('hist_to_delete')
+          .delete()
+      )
+
+      // Moderator can delete (e.g. cascading removal)
+      await assertSucceeds(
+        modDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .doc('hist_to_delete')
+          .delete()
+      )
+    })
+
+    it('21r. History event rejects mismatched ideaId (must match parent doc ID)', async () => {
+      await seedIdea('idea_parent')
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      await assertFails(
+        modDb
+          .collection('ideas')
+          .doc('idea_parent')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'mismatched_ghost_id',
+            previousStatus: 'Submitted',
+            newStatus: 'Under Review',
+            changedAt: serverTimestamp(),
+            changedBy: 'mod_123',
+            description: 'Mismatched ideaId',
+          })
+      )
+    })
+
+    it('21s. History event rejects missing required fields or extra unexpected fields', async () => {
+      await seedIdea('idea_1')
+      await seedModerator('mod_123', 'moderator')
+      const modDb = testEnv.authenticatedContext('mod_123').firestore()
+
+      // Missing description
+      await assertFails(
+        modDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'idea_1',
+            previousStatus: 'Submitted',
+            newStatus: 'Under Review',
+            changedAt: serverTimestamp(),
+            changedBy: 'mod_123',
+          })
+      )
+
+      // Extra unexpected field
+      await assertFails(
+        modDb
+          .collection('ideas')
+          .doc('idea_1')
+          .collection('statusHistory')
+          .add({
+            ideaId: 'idea_1',
+            previousStatus: 'Submitted',
+            newStatus: 'Under Review',
+            changedAt: serverTimestamp(),
+            changedBy: 'mod_123',
+            description: 'Status changed from Submitted to Under Review',
+            injectedExtraKey: 'malicious payload',
+          })
       )
     })
   })

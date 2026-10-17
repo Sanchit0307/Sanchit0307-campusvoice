@@ -256,13 +256,17 @@
 /* Grid */
 .ideas-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 1.5rem;
+  min-width: 0;
+  width: 100%;
 }
 
 /* Bottom CTA Prompt */
 .ideas-bottom-cta {
   margin-top: 3rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ideas-cta-card {
@@ -276,10 +280,15 @@
   gap: 2rem;
   box-shadow: var(--shadow-sm);
   background-image: linear-gradient(to right, rgba(59, 130, 246, 0.03), transparent);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ideas-cta-content {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .ideas-cta-title {
@@ -303,6 +312,11 @@
     gap: 1.25rem;
   }
 
+  .ideas-header-content {
+    min-width: 0;
+    width: 100%;
+  }
+
   .ideas-header-action {
     margin-top: 0;
   }
@@ -314,6 +328,8 @@
   .ideas-controls-card {
     padding: 1.25rem;
     gap: 1rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .ideas-filters-row {
@@ -333,8 +349,10 @@
   }
 
   .ideas-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.25rem;
+    min-width: 0;
+    width: 100%;
   }
 
   .ideas-cta-card {
@@ -343,6 +361,8 @@
     padding: 1.5rem;
     gap: 1.25rem;
     text-align: left;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .ideas-cta-card .btn {
@@ -363,6 +383,16 @@
 
   .ideas-no-results-card {
     padding: 2.25rem 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ideas-controls-card {
+    padding: 1rem;
+  }
+
+  .ideas-cta-card {
+    padding: 1.25rem 1rem;
   }
 }
 

@@ -17,6 +17,7 @@
   width: 100%;
   margin: 0 auto;
   padding: 2.5rem 1.5rem 3.5rem;
+  min-width: 0;
 }
 
 /* Badge (Consistent with Issue #1 Foundation) */
@@ -46,12 +47,16 @@
   line-height: 1.2;
   letter-spacing: -0.025em;
   margin-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .page-subtitle {
   font-size: 1.05rem;
   color: var(--color-text-secondary);
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Hero Section */

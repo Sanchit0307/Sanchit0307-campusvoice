@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  addDoc,
   getDoc,
   getDocs,
   updateDoc,
@@ -24,6 +23,7 @@ import {
 const IDEAS_COLLECTION = 'ideas'
 const VOTES_SUBCOLLECTION = 'votes'
 const MODERATORS_COLLECTION = 'moderators'
+export const STATUS_HISTORY_SUBCOLLECTION = 'statusHistory'
 
 export const IDEA_STATUSES = Object.freeze([
   'Submitted',
@@ -386,10 +386,29 @@ export async function createIdea({
 
   try {
     const ideasCol = collection(db, IDEAS_COLLECTION)
-    const docRef = await addDoc(ideasCol, docPayload)
+    const ideaDocRef = doc(ideasCol)
+    const historyDocRef = doc(
+      db,
+      IDEAS_COLLECTION,
+      ideaDocRef.id,
+      STATUS_HISTORY_SUBCOLLECTION,
+      `${ideaDocRef.id}_init`
+    )
+
+    const batch = writeBatch(db)
+    batch.set(ideaDocRef, docPayload)
+    batch.set(historyDocRef, {
+      ideaId: ideaDocRef.id,
+      previousStatus: null,
+      newStatus: 'Submitted',
+      changedAt: serverTimestamp(),
+      changedBy: authorId ?? null,
+      description: 'Proposal submitted',
+    })
+    await batch.commit()
 
     return {
-      id: docRef.id,
+      id: ideaDocRef.id,
       ...docPayload,
       upvotes: 0,
       hasUpvoted: false,
@@ -749,12 +768,30 @@ export async function updateIdeaStatus(ideaId, newStatus) {
 
       const sanitizedPrev = (previousStatus || 'Submitted').replace(/\s+/g, '_')
       const sanitizedNew = newStatus.replace(/\s+/g, '_')
-      const notifDocId = `${cleanIdeaId}_${sanitizedPrev}_to_${sanitizedNew}_${prevTimestamp}`
-
-      const authorId = currentData.authorId
+      const transitionId = `${cleanIdeaId}_${sanitizedPrev}_to_${sanitizedNew}_${prevTimestamp}`
       const currentUserId = auth?.currentUser?.uid
 
-      // Only notify original student author (skip if anonymous or self-action)
+      // 5. Create persistent status-history event atomically in the transaction
+      const historyDocRef = doc(
+        db,
+        IDEAS_COLLECTION,
+        cleanIdeaId,
+        STATUS_HISTORY_SUBCOLLECTION,
+        transitionId
+      )
+      const historyPayload = {
+        ideaId: cleanIdeaId,
+        previousStatus: previousStatus || 'Submitted',
+        newStatus,
+        changedAt: serverTimestamp(),
+        changedBy: currentUserId || null,
+        description: `Status changed from ${previousStatus || 'Submitted'} to ${newStatus}`,
+      }
+      transaction.set(historyDocRef, historyPayload)
+
+      const authorId = currentData.authorId
+
+      // 6. Only notify original student author (skip if anonymous or self-action)
       const shouldNotifyAuthor =
         authorId &&
         typeof authorId === 'string' &&
@@ -762,7 +799,7 @@ export async function updateIdeaStatus(ideaId, newStatus) {
         (!currentUserId || currentUserId !== authorId.trim())
 
       if (shouldNotifyAuthor) {
-        const notifRef = doc(db, NOTIFICATIONS_COLLECTION, notifDocId)
+        const notifRef = doc(db, NOTIFICATIONS_COLLECTION, transitionId)
         const message = generateStatusNotificationMessage(currentData.title, newStatus)
 
         transaction.set(notifRef, {
@@ -778,7 +815,7 @@ export async function updateIdeaStatus(ideaId, newStatus) {
         })
       }
 
-      result = { updated: true, previousStatus, newStatus }
+      result = { updated: true, previousStatus, newStatus, historyEvent: historyPayload }
     })
 
     return result
@@ -797,6 +834,88 @@ export async function updateIdeaStatus(ideaId, newStatus) {
  */
 export async function rejectIdea(ideaId) {
   return updateIdeaStatus(ideaId, 'Rejected')
+}
+
+/**
+ * Fetches the persistent status history events for a given idea.
+ * Events are returned in chronological order (oldest to newest).
+ * Safely handles missing indexes and timestamp conversions.
+ *
+ * @param {string} ideaId
+ * @returns {Promise<Array<object>>}
+ */
+export async function getStatusHistory(ideaId) {
+  assertFirebaseConfigured()
+
+  if (!ideaId || typeof ideaId !== 'string' || !ideaId.trim()) {
+    return []
+  }
+
+  const cleanIdeaId = ideaId.trim()
+  const historyCol = collection(db, IDEAS_COLLECTION, cleanIdeaId, STATUS_HISTORY_SUBCOLLECTION)
+  const orderedQuery = query(historyCol, orderBy('changedAt', 'asc'))
+
+  let docSnaps = []
+  try {
+    const snapshot = await getDocs(orderedQuery)
+    docSnaps = snapshot.docs
+  } catch (error) {
+    const isMissingIndex =
+      error?.code === 'failed-precondition' &&
+      error?.message?.toLowerCase().includes('index')
+
+    if (isMissingIndex) {
+      try {
+        const fallbackSnapshot = await getDocs(historyCol)
+        docSnaps = fallbackSnapshot.docs
+      } catch (fallbackError) {
+        throw handleFirestoreError(fallbackError, `Failed to load status history for idea ${cleanIdeaId}`)
+      }
+    } else {
+      console.error(`Error loading status history for idea ${cleanIdeaId}:`, error)
+      throw handleFirestoreError(error, `Failed to load status history for idea ${cleanIdeaId}`)
+    }
+  }
+
+  const items = docSnaps.map((docSnap) => {
+    const data = docSnap.data() || {}
+    return {
+      id: docSnap.id,
+      ideaId: data.ideaId || cleanIdeaId,
+      previousStatus: data.previousStatus ?? null,
+      newStatus: data.newStatus || '',
+      changedAt: formatIdeaTimestamp(data.changedAt),
+      changedAtRaw: data.changedAt ?? null,
+      changedBy: data.changedBy ?? null,
+      description:
+        data.description ||
+        (data.previousStatus
+          ? `Status changed from ${data.previousStatus} to ${data.newStatus}`
+          : `Status set to ${data.newStatus}`),
+    }
+  })
+
+  // Safe client-side sort by chronological order (oldest first)
+  return items.sort((a, b) => {
+    const getTimestampValue = (item) => {
+      if (!item.changedAtRaw) return 0
+      if (typeof item.changedAtRaw.toMillis === 'function') {
+        try {
+          return item.changedAtRaw.toMillis()
+        } catch {
+          return 0
+        }
+      }
+      if (typeof item.changedAtRaw.seconds === 'number') {
+        return item.changedAtRaw.seconds * 1000
+      }
+      if (item.changedAtRaw instanceof Date) {
+        return item.changedAtRaw.getTime()
+      }
+      return 0
+    }
+    return getTimestampValue(a) - getTimestampValue(b)
+  })
 }
 
 /**
@@ -867,6 +986,33 @@ export async function deleteIdea(ideaId) {
     } else {
       if (import.meta.env.DEV) {
         console.info(`[DeleteDiag] Step 2 SKIPPED: Subcollection has 0 votes.`)
+      }
+    }
+
+    // 2b. Delete all status history documents in batches of up to 400
+    currentStep = 'delete_history_batch'
+    const historyCol = collection(db, IDEAS_COLLECTION, cleanIdeaId, STATUS_HISTORY_SUBCOLLECTION)
+    const historySnapshot = await getDocs(historyCol)
+    if (!historySnapshot.empty) {
+      if (import.meta.env.DEV) {
+        console.info(`[DeleteDiag] Step 2b: Batch deleting ${historySnapshot.size} history documents...`)
+      }
+      const batchSize = 400
+      let batch = writeBatch(db)
+      let count = 0
+
+      for (const histDoc of historySnapshot.docs) {
+        batch.delete(histDoc.ref)
+        count++
+        if (count >= batchSize) {
+          await batch.commit()
+          batch = writeBatch(db)
+          count = 0
+        }
+      }
+
+      if (count > 0) {
+        await batch.commit()
       }
     }
 

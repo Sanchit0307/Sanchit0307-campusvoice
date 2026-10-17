@@ -3,6 +3,8 @@
   display: inline-flex;
   flex-direction: column;
   position: relative;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .upvote-container-detail {
@@ -192,7 +194,9 @@
 }
 
 .upvote-error-card {
-  max-width: 220px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .upvote-error-detail {

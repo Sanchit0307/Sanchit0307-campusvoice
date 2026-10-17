@@ -115,6 +115,91 @@ service cloud.firestore {
       }
 
       // ===============================================================
+      // STATUS HISTORY SUBCOLLECTION: ideas/{ideaId}/statusHistory/{historyId}
+      // ===============================================================
+      match /statusHistory/{historyId} {
+        // 1. Read permissions match parent idea's visibility (public read)
+        allow read: if true;
+
+        // 2. Creation:
+        // Either:
+        // a) An authorized moderator transitioning workflow status
+        // b) Initial submission event created consistently during proposal creation
+        allow create: if (isModerator() && isValidStatusTransitionHistory(ideaId))
+                      || isValidInitialHistory(ideaId);
+
+        // 3. Deny updates completely (history events are append-only and strictly immutable)
+        allow update: if false;
+
+        // 4. Deletion: Only authorized moderators can delete history records (e.g., during idea removal cleanup)
+        allow delete: if isModerator();
+
+        // Validation for moderator status transitions
+        function isValidStatusTransitionHistory(parentIdeaId) {
+          let data = request.resource.data;
+          let requiredKeys = [
+            'ideaId',
+            'previousStatus',
+            'newStatus',
+            'changedAt',
+            'changedBy',
+            'description'
+          ];
+          let allowedStatuses = [
+            'Submitted',
+            'Under Review',
+            'In Progress',
+            'Accepted',
+            'Implemented',
+            'Rejected'
+          ];
+
+          return data.keys().hasAll(requiredKeys)
+            && data.keys().hasOnly(requiredKeys)
+            && data.ideaId == parentIdeaId
+            && data.previousStatus in allowedStatuses
+            && data.newStatus in allowedStatuses
+            && data.previousStatus != data.newStatus
+            && data.changedAt == request.time
+            && data.changedBy == request.auth.uid
+            && data.description is string
+            && data.description.size() >= 3
+            && data.description.size() <= 200;
+        }
+
+        // Validation for initial proposal submission event
+        function isValidInitialHistory(parentIdeaId) {
+          let data = request.resource.data;
+          let requiredKeys = [
+            'ideaId',
+            'previousStatus',
+            'newStatus',
+            'changedAt',
+            'changedBy',
+            'description'
+          ];
+          let parentPath = /databases/$(database)/documents/ideas/$(parentIdeaId);
+          let parentAfter = getAfter(parentPath);
+
+          return data.keys().hasAll(requiredKeys)
+            && data.keys().hasOnly(requiredKeys)
+            && data.ideaId == parentIdeaId
+            && data.previousStatus == null
+            && data.newStatus == 'Submitted'
+            && data.changedAt == request.time
+            && !exists(parentPath)
+            && existsAfter(parentPath)
+            && parentAfter.data.status == 'Submitted'
+            && parentAfter.data.createdAt == request.time
+            && data.changedBy == parentAfter.data.authorId
+            && (data.changedBy == null || (isAuthenticated() && data.changedBy == request.auth.uid))
+            && data.description is string
+            && data.description.size() >= 3
+            && data.description.size() <= 200;
+        }
+      }
+
+      // ===============================================================
       // VOTES SUBCOLLECTION: ideas/{ideaId}/votes/{userId}
       // ===============================================================
       match /votes/{userId} {

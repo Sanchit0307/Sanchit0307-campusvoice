@@ -7,8 +7,11 @@ vi.mock('firebase/firestore', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    collection: vi.fn((_db, name) => ({ id: name, path: name })),
-    doc: vi.fn((_db, col, id) => ({ id, path: `${col}/${id}` })),
+    collection: vi.fn((_db, ...args) => ({ id: args[args.length - 1], path: args.join('/') })),
+    doc: vi.fn((_db, ...args) => {
+      const lastId = args[args.length - 1]
+      return { id: lastId, path: args.join('/') }
+    }),
     runTransaction: vi.fn(),
     serverTimestamp: vi.fn(() => ({ _methodName: 'serverTimestamp' })),
   }
@@ -19,7 +22,7 @@ describe('notificationTrigger Suite (Atomic & Idempotent updateIdeaStatus)', () 
     vi.clearAllMocks()
   })
 
-  it('atomically updates idea status and creates notification inside runTransaction', async () => {
+  it('atomically updates idea status, creates status history event, and creates notification inside runTransaction', async () => {
     const mockTx = {
       get: vi.fn().mockResolvedValue({
         exists: () => true,
@@ -46,10 +49,25 @@ describe('notificationTrigger Suite (Atomic & Idempotent updateIdeaStatus)', () 
       })
     )
 
-    expect(mockTx.set).toHaveBeenCalledTimes(1)
-    const [notifDocArg, notifPayload] = mockTx.set.mock.calls[0]
-    expect(notifDocArg.id).toBe('idea-123_Under_Review_to_Accepted_1700000000000')
-    expect(notifPayload).toMatchObject({
+    // Two set operations in the transaction: 1 for statusHistory and 1 for notifications
+    expect(mockTx.set).toHaveBeenCalledTimes(2)
+
+    // Verify status history event creation
+    const historyCall = mockTx.set.mock.calls.find(([ref]) => ref.path.includes('statusHistory'))
+    expect(historyCall).toBeDefined()
+    expect(historyCall[0].id).toBe('idea-123_Under_Review_to_Accepted_1700000000000')
+    expect(historyCall[1]).toMatchObject({
+      ideaId: 'idea-123',
+      previousStatus: 'Under Review',
+      newStatus: 'Accepted',
+      description: 'Status changed from Under Review to Accepted',
+    })
+
+    // Verify notification creation
+    const notifCall = mockTx.set.mock.calls.find(([ref]) => ref.path.startsWith('notifications/'))
+    expect(notifCall).toBeDefined()
+    expect(notifCall[0].id).toBe('idea-123_Under_Review_to_Accepted_1700000000000')
+    expect(notifCall[1]).toMatchObject({
       recipientId: 'student_456',
       ideaId: 'idea-123',
       ideaTitle: 'Improve Campus Wi-Fi',
@@ -104,7 +122,9 @@ describe('notificationTrigger Suite (Atomic & Idempotent updateIdeaStatus)', () 
     firestore.runTransaction.mockImplementationOnce(async (_db, callback) => callback(mockTx1))
     await updateIdeaStatus('idea-solar', 'In Progress')
 
-    const firstDocId = mockTx1.set.mock.calls[0][0].id
+    const firstNotif = mockTx1.set.mock.calls.find(([ref]) => ref.path.startsWith('notifications/'))
+    expect(firstNotif).toBeDefined()
+    const firstDocId = firstNotif[0].id
     expect(firstDocId).toBe('idea-solar_Under_Review_to_In_Progress_1700000001000')
 
     // Step 2: Later legitimate transition back to In Progress after proposal was at T2 (different updatedAt)
@@ -124,7 +144,9 @@ describe('notificationTrigger Suite (Atomic & Idempotent updateIdeaStatus)', () 
     firestore.runTransaction.mockImplementationOnce(async (_db, callback) => callback(mockTx2))
     await updateIdeaStatus('idea-solar', 'In Progress')
 
-    const secondDocId = mockTx2.set.mock.calls[0][0].id
+    const secondNotif = mockTx2.set.mock.calls.find(([ref]) => ref.path.startsWith('notifications/'))
+    expect(secondNotif).toBeDefined()
+    const secondDocId = secondNotif[0].id
     expect(secondDocId).toBe('idea-solar_Under_Review_to_In_Progress_1700000099000')
     expect(secondDocId).not.toBe(firstDocId)
   })
@@ -138,7 +160,7 @@ describe('notificationTrigger Suite (Atomic & Idempotent updateIdeaStatus)', () 
     )
   })
 
-  it('updates status but skips notification for anonymous proposals (authorId == null)', async () => {
+  it('updates status and creates history event but skips notification for anonymous proposals (authorId == null)', async () => {
     const mockTx = {
       get: vi.fn().mockResolvedValue({
         exists: () => true,
@@ -156,10 +178,15 @@ describe('notificationTrigger Suite (Atomic & Idempotent updateIdeaStatus)', () 
     await updateIdeaStatus('idea-anon', 'Under Review')
 
     expect(mockTx.update).toHaveBeenCalledTimes(1)
-    expect(mockTx.set).not.toHaveBeenCalled()
+    // History event IS created, notification is NOT created
+    expect(mockTx.set).toHaveBeenCalledTimes(1)
+    const [historyArg, historyPayload] = mockTx.set.mock.calls[0]
+    expect(historyArg.path).toContain('statusHistory')
+    expect(historyPayload.ideaId).toBe('idea-anon')
+    expect(historyPayload.newStatus).toBe('Under Review')
   })
 
-  it('updates status but skips notification if moderator is author of the proposal (no self-notification)', async () => {
+  it('updates status and creates history event but skips notification if moderator is author of the proposal (no self-notification)', async () => {
     const originalCurrentUser = firebaseApp.auth.currentUser
     Object.defineProperty(firebaseApp.auth, 'currentUser', {
       value: { uid: 'mod_and_author' },
@@ -184,7 +211,11 @@ describe('notificationTrigger Suite (Atomic & Idempotent updateIdeaStatus)', () 
       await updateIdeaStatus('idea-own', 'In Progress')
 
       expect(mockTx.update).toHaveBeenCalledTimes(1)
-      expect(mockTx.set).not.toHaveBeenCalled()
+      // History event IS created with changedBy = 'mod_and_author', but self-notification is skipped
+      expect(mockTx.set).toHaveBeenCalledTimes(1)
+      const [historyArg, historyPayload] = mockTx.set.mock.calls[0]
+      expect(historyArg.path).toContain('statusHistory')
+      expect(historyPayload.changedBy).toBe('mod_and_author')
     } finally {
       Object.defineProperty(firebaseApp.auth, 'currentUser', {
         value: originalCurrentUser,

@@ -31,7 +31,7 @@ describe('moderationService Unit Suite', () => {
       expect(firestore.deleteDoc).not.toHaveBeenCalled()
     })
 
-    it('fetches votes subcollection, deletes vote documents via writeBatch, and deletes idea doc', async () => {
+    it('fetches votes and history subcollections, deletes documents via writeBatch, and deletes idea doc', async () => {
       const mockBatch = {
         delete: vi.fn(),
         commit: vi.fn().mockResolvedValue(),
@@ -42,29 +42,41 @@ describe('moderationService Unit Suite', () => {
         { id: 'voter-1', ref: { path: 'ideas/idea-1/votes/voter-1' } },
         { id: 'voter-2', ref: { path: 'ideas/idea-1/votes/voter-2' } },
       ]
-      firestore.getDocs.mockResolvedValueOnce({
-        empty: false,
-        docs: mockVoteDocs,
-      })
+      const mockHistoryDocs = [
+        { id: 'hist-1', ref: { path: 'ideas/idea-1/statusHistory/hist-1' } },
+      ]
+      firestore.getDocs
+        .mockResolvedValueOnce({
+          empty: false,
+          docs: mockVoteDocs,
+          size: 2,
+        })
+        .mockResolvedValueOnce({
+          empty: false,
+          docs: mockHistoryDocs,
+          size: 1,
+        })
 
       firestore.deleteDoc.mockResolvedValueOnce()
 
       await deleteIdea('idea-1')
 
-      // Verifies subcollection vote deletion via batch
-      expect(mockBatch.delete).toHaveBeenCalledTimes(2)
+      // Verifies subcollection vote and history deletion via batch
+      expect(mockBatch.delete).toHaveBeenCalledTimes(3)
       expect(mockBatch.delete).toHaveBeenCalledWith(mockVoteDocs[0].ref)
       expect(mockBatch.delete).toHaveBeenCalledWith(mockVoteDocs[1].ref)
-      expect(mockBatch.commit).toHaveBeenCalledTimes(1)
+      expect(mockBatch.delete).toHaveBeenCalledWith(mockHistoryDocs[0].ref)
+      expect(mockBatch.commit).toHaveBeenCalledTimes(2)
 
       // Verifies parent idea document deletion
       expect(firestore.deleteDoc).toHaveBeenCalledTimes(1)
     })
 
-    it('deletes idea document even if votes subcollection is empty', async () => {
-      firestore.getDocs.mockResolvedValueOnce({
+    it('deletes idea document even if votes and history subcollections are empty', async () => {
+      firestore.getDocs.mockResolvedValue({
         empty: true,
         docs: [],
+        size: 0,
       })
       firestore.deleteDoc.mockResolvedValueOnce()
 

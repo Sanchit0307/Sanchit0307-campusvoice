@@ -7,6 +7,9 @@
   display: flex;
   flex-direction: column;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 .idea-card:hover {
@@ -26,6 +29,8 @@
   gap: 0.75rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .idea-category-tag {
@@ -37,6 +42,9 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   letter-spacing: 0.02em;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .idea-status-badge {
@@ -48,6 +56,8 @@
   padding: 0.2rem 0.6rem;
   border-radius: 9999px;
   line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .status-dot {
@@ -100,6 +110,8 @@
   gap: 0.5rem;
   flex: 1;
   margin-bottom: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .idea-card-title {
@@ -108,12 +120,18 @@
   color: var(--color-text-primary);
   line-height: 1.35;
   letter-spacing: -0.015em;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .idea-card-title-link {
   color: inherit;
   text-decoration: none;
   transition: color 0.15s ease;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .idea-card-title-link:hover,
@@ -154,6 +172,10 @@
   font-size: 0.925rem;
   color: var(--color-text-secondary);
   line-height: 1.55;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .idea-card-footer {
@@ -163,6 +185,10 @@
   padding-top: 1rem;
   border-top: 1px solid var(--color-border-subtle);
   margin-top: auto;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .idea-upvote-badge {
@@ -230,5 +256,20 @@
   background-color: rgba(239, 68, 68, 0.18);
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.35);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 480px) {
+  .idea-card {
+    padding: 1.25rem 1rem;
+  }
+
+  .idea-card-header {
+    gap: 0.5rem;
+  }
+
+  .idea-card-footer {
+    gap: 0.65rem;
+  }
 }
 

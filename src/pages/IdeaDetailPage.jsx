@@ -1,38 +1,81 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getIdeaById, updateIdeaStatus, IDEA_STATUSES } from '../services/ideasService'
+import {
+  getIdeaById,
+  updateIdeaStatus,
+  getStatusHistory,
+  IDEA_STATUSES,
+} from '../services/ideasService'
 import { useAuth } from '../context'
 import UpvoteButton from '../components/UpvoteButton'
+import IdeaStatusTimeline from '../components/IdeaStatusTimeline'
 import './IdeaDetailPage.css'
 
 function IdeaDetailPage() {
   const { id } = useParams()
   const { user, isModerator } = useAuth()
   const [idea, setIdea] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(Boolean(id))
   const [error, setError] = useState(null)
+  const [history, setHistory] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(Boolean(id))
+  const [historyError, setHistoryError] = useState(null)
   const [selectedStatus, setSelectedStatus] = useState('')
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [statusUpdateMessage, setStatusUpdateMessage] = useState(null)
   const [statusUpdateError, setStatusUpdateError] = useState(null)
 
+  const loadHistory = useCallback(async () => {
+    if (!id) {
+      setHistory([])
+      setHistoryLoading(false)
+      return
+    }
+
+    setHistoryLoading(true)
+    setHistoryError(null)
+    try {
+      const fetchedHistory = await getStatusHistory(id)
+      setHistory(fetchedHistory)
+    } catch (err) {
+      console.error(`Failed to load status history for "${id}":`, err)
+      setHistoryError(err.message || 'Failed to load status history.')
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [id])
+
   const loadIdea = async () => {
     if (!id) {
       setIdea(null)
+      setHistory([])
       setLoading(false)
+      setHistoryLoading(false)
       return
     }
 
     setLoading(true)
     setError(null)
+    setHistoryLoading(true)
+    setHistoryError(null)
+
     try {
-      const fetchedIdea = await getIdeaById(id, user?.uid)
+      const [fetchedIdea, fetchedHistory] = await Promise.all([
+        getIdeaById(id, user?.uid),
+        getStatusHistory(id).catch((histErr) => {
+          console.warn(`Could not load status history for "${id}":`, histErr)
+          setHistoryError(histErr.message || 'Failed to load status history.')
+          return []
+        }),
+      ])
       setIdea(fetchedIdea)
+      setHistory(fetchedHistory)
     } catch (err) {
       console.error(`Failed to load idea "${id}" from Firestore:`, err)
       setError(err.message || 'Failed to load idea details from the database.')
     } finally {
       setLoading(false)
+      setHistoryLoading(false)
     }
   }
 
@@ -45,14 +88,26 @@ function IdeaDetailPage() {
 
     async function fetchData() {
       try {
-        const fetchedIdea = await getIdeaById(id, user?.uid)
+        const [fetchedIdea, fetchedHistory] = await Promise.all([
+          getIdeaById(id, user?.uid),
+          getStatusHistory(id).catch((histErr) => {
+            console.warn(`Could not load status history for "${id}":`, histErr)
+            if (!isCancelled) {
+              setHistoryError(histErr.message || 'Failed to load status history.')
+            }
+            return []
+          }),
+        ])
         if (!isCancelled) {
           setIdea(fetchedIdea)
+          setHistory(fetchedHistory)
+          setHistoryLoading(false)
         }
       } catch (err) {
         if (!isCancelled) {
           console.error(`Failed to load idea "${id}" from Firestore:`, err)
           setError(err.message || 'Failed to load idea details from the database.')
+          setHistoryLoading(false)
         }
       } finally {
         if (!isCancelled) {
@@ -140,6 +195,7 @@ function IdeaDetailPage() {
         updatedAt: 'Just now',
       }))
       setStatusUpdateMessage(`Proposal status successfully updated to "${selectedStatus}".`)
+      await loadHistory()
     } catch (err) {
       console.error('Failed to update proposal status:', err)
       setStatusUpdateError(err.message || 'Failed to update proposal status.')
@@ -316,6 +372,15 @@ function IdeaDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Proposal Status Timeline */}
+          <IdeaStatusTimeline
+            idea={idea}
+            history={history}
+            loading={historyLoading}
+            error={historyError}
+            onRetry={loadHistory}
+          />
 
           {/* Moderator Workflow Controls */}
           {isModerator && (
