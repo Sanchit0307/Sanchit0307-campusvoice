@@ -131,10 +131,12 @@ function Navbar() {
             to="/dashboard"
             end
             className={({ isActive }) => {
-              const isModQueue =
+              const isSpecialTab =
                 location.pathname === '/moderation' ||
-                location.search.includes('tab=moderation-queue')
-              return isActive && !isModQueue ? 'nav-link active' : 'nav-link'
+                location.pathname === '/analytics' ||
+                location.search.includes('tab=moderation-queue') ||
+                location.search.includes('tab=analytics')
+              return isActive && !isSpecialTab ? 'nav-link active' : 'nav-link'
             }}
             onClick={closeMobileMenu}
           >
@@ -152,6 +154,21 @@ function Navbar() {
               onClick={closeMobileMenu}
             >
               Moderation
+            </NavLink>
+          )}
+          {isModerator && (
+            <NavLink
+              to="/dashboard?tab=analytics"
+              className={({ isActive }) => {
+                const isAnalytics =
+                  location.pathname === '/analytics' ||
+                  location.search.includes('tab=analytics')
+                return isActive || isAnalytics ? 'nav-link active' : 'nav-link'
+              }}
+              onClick={closeMobileMenu}
+              data-testid="navbar-analytics-link"
+            >
+              Analytics
             </NavLink>
           )}
 

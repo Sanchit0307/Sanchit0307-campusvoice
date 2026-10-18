@@ -19,6 +19,7 @@ function App() {
           <Route path="submit" element={<SubmitIdeaPage />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="moderation" element={<DashboardPage />} />
+          <Route path="analytics" element={<DashboardPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

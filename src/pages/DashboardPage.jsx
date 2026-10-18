@@ -13,6 +13,7 @@ import IdeaCard from '../components/IdeaCard'
 import EmptyState from '../components/EmptyState'
 import SignInPromptModal from '../components/SignInPromptModal'
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal'
+import ModeratorAnalyticsDashboard from '../components/analytics/ModeratorAnalyticsDashboard'
 import './DashboardPage.css'
 import './IdeasPage.css'
 
@@ -24,11 +25,13 @@ function DashboardPage() {
   const tabFromQuery = searchParams.get('tab')
   const wantsModeration =
     tabFromQuery === 'moderation-queue' || location.pathname === '/moderation'
+  const wantsAnalytics =
+    tabFromQuery === 'analytics' || location.pathname === '/analytics'
 
-  // Tab State for authorized moderators (protected: only 'moderation-queue' if isModerator is true)
+  // Tab State for authorized moderators (protected: only 'moderation-queue' or 'analytics' if isModerator is true)
   const [overrideTab, setOverrideTab] = useState(null)
   const activeTab = isModerator
-    ? (overrideTab ?? (wantsModeration ? 'moderation-queue' : 'my-proposals'))
+    ? (overrideTab ?? (wantsAnalytics ? 'analytics' : wantsModeration ? 'moderation-queue' : 'my-proposals'))
     : 'my-proposals'
 
   // Student Dashboard State
@@ -452,10 +455,31 @@ function DashboardPage() {
                 <span>🛡️ Moderation Queue</span>
                 <span className="moderator-badge-pill">Staff</span>
               </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'analytics'}
+                className={`dashboard-tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+                onClick={() => {
+                  setOverrideTab('analytics')
+                  setSearchParams({ tab: 'analytics' })
+                }}
+                data-testid="tab-analytics"
+              >
+                <span>📊 Analytics</span>
+                <span className="moderator-badge-pill">Staff</span>
+              </button>
             </nav>
           )}
 
-          {activeTab === 'moderation-queue' && isModerator ? (
+          {activeTab === 'analytics' && isModerator ? (
+            /* Analytics Dashboard View (Restricted to Authorized Moderators) */
+            <ModeratorAnalyticsDashboard
+              user={user}
+              isModerator={isModerator}
+              initialIdeas={queueIdeas.length > 0 ? queueIdeas : null}
+            />
+          ) : activeTab === 'moderation-queue' && isModerator ? (
             /* Moderation Queue View (Restricted to Authorized Moderators) */
             <section className="moderation-queue-container" aria-label="Staff Moderation Queue">
               {/* Filter Bar */}

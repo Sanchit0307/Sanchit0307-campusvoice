@@ -1,0 +1,92 @@
+.category-chart-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.category-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.category-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.category-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-icon {
+  font-size: 1rem;
+}
+
+.category-count-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.category-track {
+  height: 10px;
+  background-color: var(--color-border-subtle, #f1f5f9);
+  border-radius: 9999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.category-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 0;
+}
+
+/* Category-specific accent tints for visual interest */
+.category-academics .category-fill {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.category-campus-life .category-fill {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.category-dining .category-fill {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.category-facilities .category-fill {
+  background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+}
+
+.category-sustainability .category-fill {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.category-transportation .category-fill {
+  background: linear-gradient(90deg, #f97316, #fb923c);
+}
+
+.category-wellness .category-fill {
+  background: linear-gradient(90deg, #ec4899, #f472b6);
+}
+
+.category-other .category-fill {
+  background: linear-gradient(90deg, #64748b, #94a3b8);
+}
