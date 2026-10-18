@@ -13,7 +13,6 @@ function HomePage() {
     <div className="page-container">
       {/* Hero Section */}
       <section className="hero-section">
-        <div className="badge">CampusVoice Home &bull; Issue #2 Shell</div>
         <h1 className="page-title">Shape Your Campus Experience</h1>
         <p className="hero-lead">
           CampusVoice is the central platform for students to propose, discover, and upvote

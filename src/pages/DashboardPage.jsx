@@ -303,13 +303,6 @@ function DashboardPage() {
       {/* Page Header */}
       <div className="dashboard-header">
         <div className="dashboard-header-content">
-          <div className="badge">
-            {isModerator
-              ? activeTab === 'moderation-queue'
-                ? 'Moderation \u2022 Staff Portal'
-                : 'Dashboard \u2022 Student Hub'
-              : 'Dashboard \u2022 Student Hub'}
-          </div>
           <h1 className="page-title">
             {user
               ? activeTab === 'moderation-queue' && isModerator

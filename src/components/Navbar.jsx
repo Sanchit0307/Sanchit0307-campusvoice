@@ -98,7 +98,6 @@ function Navbar() {
             </svg>
           </div>
           <span className="brand-name">CampusVoice</span>
-          <span className="brand-tag">BuildLab &apos;26</span>
         </Link>
 
         {/* Navigation Links */}

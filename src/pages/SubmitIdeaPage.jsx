@@ -108,7 +108,6 @@ function SubmitIdeaPage() {
     <div className="page-container">
       {/* Header */}
       <div className="page-header">
-        <div className="badge">Ideas &bull; New Proposal</div>
         <h1 className="page-title">Submit a Campus Idea</h1>
         <p className="page-subtitle">
           Propose an enhancement or new initiative to improve academic life, student facilities, or campus culture.
