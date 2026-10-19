@@ -9,7 +9,6 @@ function Footer() {
           <div className="footer-brand-section">
             <div className="footer-brand">
               <span className="footer-logo">CampusVoice</span>
-              <span className="footer-badge">Solo Track</span>
             </div>
             <p className="footer-tagline">
               Empowering students to share ideas, foster improvements, and drive positive changes on campus.
@@ -25,25 +24,12 @@ function Footer() {
               <li><Link to="/dashboard">Dashboard</Link></li>
             </ul>
           </div>
-
-          <div className="footer-links-group">
-            <span className="footer-group-title">Project Info</span>
-            <ul className="footer-links">
-              <li><span>TechSpace BuildLab &apos;26</span></li>
-              <li><span>Milestone: Issue #2 Shell</span></li>
-              <li><span>React 19 &bull; Vite</span></li>
-            </ul>
-          </div>
         </div>
 
         <div className="footer-bottom">
           <p className="footer-copy">
-            &copy; 2026 CampusVoice &bull; Built for TechSpace BuildLab &apos;26
+            &copy; 2026 CampusVoice
           </p>
-          <span className="footer-status-pill">
-            <span className="status-indicator"></span>
-            App Shell &amp; Navigation Active
-          </span>
         </div>
       </div>
     </footer>

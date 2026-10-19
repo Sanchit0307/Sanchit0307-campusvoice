@@ -17,7 +17,7 @@
 
 .footer-main {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 2.5rem;
 }
 
@@ -39,16 +39,6 @@
   font-size: 1.15rem;
   color: var(--color-text-primary);
   letter-spacing: -0.01em;
-}
-
-.footer-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.15rem 0.45rem;
-  background-color: var(--color-primary-light);
-  color: var(--color-primary-text, var(--color-primary-dark));
-  border: 1px solid var(--color-primary-border, #bfdbfe);
-  border-radius: 9999px;
 }
 
 .footer-tagline {
@@ -88,10 +78,6 @@
   color: var(--color-primary);
 }
 
-.footer-links span {
-  color: var(--color-text-secondary);
-}
-
 .footer-bottom {
   display: flex;
   align-items: center;
@@ -105,27 +91,6 @@
 
 .footer-copy {
   color: var(--color-text-muted);
-}
-
-.footer-status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  background-color: var(--color-bg);
-  padding: 0.25rem 0.65rem;
-  border: 1px solid var(--color-border);
-  border-radius: 9999px;
-}
-
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  background-color: var(--color-success);
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 @media (max-width: 768px) {
