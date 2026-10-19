@@ -300,6 +300,86 @@ service cloud.firestore {
           && get(ideaPath).data.title == data.ideaTitle;
       }
     }
+
+    // ===============================================================
+    // USERS COLLECTION: users/{userId}
+    // Private student profile documents keyed by authenticated UID.
+    // Strict privacy: A student can ONLY read and write their own profile document.
+    // Role escalation, privilege modification, and unauthorized field mutation are strictly prevented.
+    // ===============================================================
+    match /users/{userId} {
+      // 1. Authenticated students can read ONLY their own private profile
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+
+      // 2. Authenticated students can create their own profile document
+      allow create: if isAuthenticated()
+        && request.auth.uid == userId
+        && isValidUserProfileCreate(userId);
+
+      // 3. Authenticated students can update ONLY permitted fields on their own profile
+      allow update: if isAuthenticated()
+        && request.auth.uid == userId
+        && isValidUserProfileUpdate();
+
+      // 4. Deny deletion by clients to preserve data integrity
+      allow delete: if false;
+
+      function isValidUserProfileCreate(ownerId) {
+        let data = request.resource.data;
+        let allowedKeys = [
+          'uid',
+          'displayName',
+          'email',
+          'bio',
+          'department',
+          'year',
+          'createdAt',
+          'updatedAt'
+        ];
+        let requiredKeys = [
+          'uid',
+          'displayName',
+          'email',
+          'createdAt',
+          'updatedAt'
+        ];
+
+        return data.keys().hasAll(requiredKeys)
+          && data.keys().hasOnly(allowedKeys)
+          && data.uid == ownerId
+          && data.email is string
+          && data.email.size() > 0
+          && data.email.size() <= 128
+          && data.displayName is string
+          && data.displayName.size() >= 2
+          && data.displayName.size() <= 50
+          && (!('bio' in data) || (data.bio is string && data.bio.size() <= 250))
+          && (!('department' in data) || (data.department is string && data.department.size() <= 100))
+          && (!('year' in data) || (data.year is string && data.year.size() <= 30))
+          && data.createdAt == request.time
+          && data.updatedAt == request.time;
+      }
+
+      function isValidUserProfileUpdate() {
+        let incoming = request.resource.data;
+        let diff = incoming.diff(resource.data);
+        let allowedUpdateKeys = [
+          'displayName',
+          'bio',
+          'department',
+          'year',
+          'updatedAt'
+        ];
+
+        return diff.affectedKeys().hasOnly(allowedUpdateKeys)
+          && diff.affectedKeys().hasAny(['displayName', 'bio', 'department', 'year', 'updatedAt'])
+          && (!diff.affectedKeys().hasAny(['displayName']) || (incoming.displayName is string && incoming.displayName.size() >= 2 && incoming.displayName.size() <= 50))
+          && (!diff.affectedKeys().hasAny(['bio']) || (incoming.bio is string && incoming.bio.size() <= 250))
+          && (!diff.affectedKeys().hasAny(['department']) || (incoming.department is string && incoming.department.size() <= 100))
+          && (!diff.affectedKeys().hasAny(['year']) || (incoming.year is string && incoming.year.size() <= 30))
+          && incoming.updatedAt == request.time;
+      }
+    }
   }
 }
 

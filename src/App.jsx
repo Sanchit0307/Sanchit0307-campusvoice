@@ -5,6 +5,7 @@ import IdeasPage from './pages/IdeasPage'
 import IdeaDetailPage from './pages/IdeaDetailPage'
 import SubmitIdeaPage from './pages/SubmitIdeaPage'
 import DashboardPage from './pages/DashboardPage'
+import ProfilePage from './pages/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
 import './App.css'
 
@@ -18,6 +19,7 @@ function App() {
           <Route path="ideas/:id" element={<IdeaDetailPage />} />
           <Route path="submit" element={<SubmitIdeaPage />} />
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="moderation" element={<DashboardPage />} />
           <Route path="analytics" element={<DashboardPage />} />
           <Route path="*" element={<NotFoundPage />} />

@@ -204,6 +204,21 @@
   flex-shrink: 0;
 }
 
+.navbar-user-profile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 9999px;
+  transition: opacity 0.15s ease;
+}
+
+.navbar-user-profile-link:hover {
+  opacity: 0.85;
+}
+
 .navbar-user-avatar {
   width: 28px;
   height: 28px;
