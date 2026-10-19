@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { useAuth } from '../context'
+import { useAuth, useOnboarding } from '../context'
 import ThemeToggle from './ThemeToggle'
 import NotificationBell from './NotificationBell'
 import './Navbar.css'
@@ -12,6 +12,7 @@ function Navbar() {
 
   const { user, loading, isConfigured, signInWithGoogle, signOutUser, isModerator } =
     useAuth()
+  const { startTour } = useOnboarding()
   const location = useLocation()
 
   const toggleMobileMenu = () => {
@@ -77,7 +78,7 @@ function Navbar() {
 
   return (
     <header className="navbar-header">
-      <div className="navbar-container">
+      <div className="navbar-container" data-tour="navbar-container">
         {/* Brand Logo & Name */}
         <Link to="/" className="navbar-brand" onClick={closeMobileMenu}>
           <div className="brand-icon" aria-hidden="true">
@@ -104,6 +105,7 @@ function Navbar() {
         <nav
           className={`navbar-nav ${isMobileMenuOpen ? 'nav-open' : ''}`}
           aria-label="Main Navigation"
+          data-tour="navbar-nav"
         >
           <NavLink
             to="/"
@@ -117,6 +119,7 @@ function Navbar() {
             to="/ideas"
             className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
             onClick={closeMobileMenu}
+            data-tour="nav-ideas"
           >
             Ideas
           </NavLink>
@@ -124,6 +127,7 @@ function Navbar() {
             to="/submit"
             className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
             onClick={closeMobileMenu}
+            data-tour="nav-submit"
           >
             Submit Idea
           </NavLink>
@@ -139,6 +143,7 @@ function Navbar() {
               return isActive && !isSpecialTab ? 'nav-link active' : 'nav-link'
             }}
             onClick={closeMobileMenu}
+            data-tour="nav-dashboard"
           >
             Dashboard
           </NavLink>
@@ -272,6 +277,7 @@ function Navbar() {
               to="/submit"
               className="navbar-cta-btn"
               onClick={closeMobileMenu}
+              data-tour="submit-nav"
             >
               <span className="cta-icon" aria-hidden="true">+</span>
               New Idea
@@ -279,13 +285,29 @@ function Navbar() {
           </div>
         </nav>
 
-        {/* Right Controls: Notification Bell, Theme Toggle & Mobile Menu Hamburger */}
+        {/* Right Controls: Tour, Notification Bell, Theme Toggle & Mobile Menu Hamburger */}
         <div className="navbar-right-controls">
-          {user && <NotificationBell key={user.uid} />}
+          <button
+            type="button"
+            className="navbar-tour-btn"
+            onClick={() => startTour(true)}
+            title="Take a quick tour of CampusVoice"
+            aria-label="Take quick tour"
+            data-testid="navbar-tour-btn"
+          >
+            <span className="navbar-tour-icon" aria-hidden="true">💡</span>
+            <span>Tour</span>
+          </button>
+          {user && (
+            <div data-tour="notification-bell">
+              <NotificationBell key={user.uid} />
+            </div>
+          )}
           <ThemeToggle />
           <button
             type="button"
             className="mobile-menu-btn"
+            data-tour="mobile-menu-btn"
             onClick={toggleMobileMenu}
             aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
             aria-expanded={isMobileMenuOpen}

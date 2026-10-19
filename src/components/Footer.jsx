@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom'
+import { useOnboarding } from '../context'
 import './Footer.css'
 
 function Footer() {
+  const { startTour } = useOnboarding()
+
   return (
     <footer className="footer-shell">
       <div className="footer-container">
@@ -22,6 +25,16 @@ function Footer() {
               <li><Link to="/ideas">Browse Ideas</Link></li>
               <li><Link to="/submit">Submit an Idea</Link></li>
               <li><Link to="/dashboard">Dashboard</Link></li>
+              <li>
+                <button
+                  type="button"
+                  className="footer-tour-btn"
+                  onClick={() => startTour(true)}
+                  aria-label="Start Quick Tour"
+                >
+                  Quick Tour
+                </button>
+              </li>
             </ul>
           </div>
         </div>

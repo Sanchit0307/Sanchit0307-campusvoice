@@ -172,6 +172,7 @@ export function UpvoteButton({
     <div
       className={`upvote-button-container upvote-container-${variant} ${className}`}
       data-prevent-card-nav="true"
+      data-tour="idea-upvote"
     >
       <button
         type="button"

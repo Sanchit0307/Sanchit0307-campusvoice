@@ -127,7 +127,7 @@ function IdeasPage() {
       </div>
 
       {/* Ideas Listing or States */}
-      <section className="ideas-content-section" aria-label="Campus Ideas Listing">
+      <section className="ideas-content-section" aria-label="Campus Ideas Listing" data-tour="ideas-content">
         {loading ? (
           <div className="ideas-state-card" role="status" aria-live="polite">
             <div className="ideas-loading-spinner" aria-hidden="true" />
@@ -158,7 +158,7 @@ function IdeasPage() {
         ) : (
           <>
             {/* Search, Filter, and Sorting Controls */}
-            <div className="ideas-controls-card" role="search" aria-label="Search and filter proposals">
+            <div className="ideas-controls-card" role="search" aria-label="Search and filter proposals" data-tour="ideas-filters">
               {/* Search Bar */}
               <div className="ideas-search-bar">
                 <label htmlFor="ideas-search-input" className="ideas-control-label">

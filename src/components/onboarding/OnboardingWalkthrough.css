@@ -1,0 +1,457 @@
+/* ==========================================================================
+   CampusVoice Interactive Onboarding Walkthrough Styles
+   Uses theme variables from index.css for full Light & Dark mode fidelity
+   ========================================================================== */
+
+/* Overlay Container */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+/* Welcome Screen Backdrop (dim without blur) */
+.onboarding-welcome-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  z-index: 10001;
+}
+
+[data-theme="dark"] .onboarding-welcome-backdrop {
+  background-color: rgba(3, 7, 18, 0.78);
+}
+
+/* Fallback Backdrop if target is missing */
+.onboarding-fallback-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  z-index: 10001;
+}
+
+[data-theme="dark"] .onboarding-fallback-backdrop {
+  background-color: rgba(3, 7, 18, 0.78);
+}
+
+/* Full-Screen SVG Spotlight Overlay */
+.onboarding-spotlight-svg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10001;
+  pointer-events: none;
+}
+
+/* Dimmed backdrop layer with cutout hole (No blur, sharp target) */
+.onboarding-dim-layer {
+  fill: rgba(15, 23, 42, 0.68);
+  pointer-events: visiblePainted;
+  cursor: pointer;
+  transition: fill 0.2s ease;
+}
+
+[data-theme="dark"] .onboarding-dim-layer {
+  fill: rgba(3, 7, 18, 0.78);
+}
+
+/* Spotlight Highlight Ring around the cutout opening */
+.onboarding-spotlight-ring {
+  fill: none;
+  stroke: var(--color-primary, #3b82f6);
+  stroke-width: 2.5px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px var(--color-focus-ring, rgba(59, 130, 246, 0.45)));
+  transition:
+    x 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    y 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="dark"] .onboarding-spotlight-ring {
+  stroke: #60a5fa;
+  filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.45));
+}
+
+/* Welcome Card Modal */
+.onboarding-welcome-card {
+  position: relative;
+  z-index: 10003;
+  width: 90%;
+  max-width: 440px;
+  background-color: var(--color-surface, #ffffff);
+  color: var(--color-text-primary, #0f172a);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--shadow-lg, 0 10px 25px -5px rgba(0, 0, 0, 0.3));
+  padding: 2rem 1.75rem;
+  text-align: center;
+  animation: onboarding-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.onboarding-welcome-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary-dark, #2563eb);
+  margin-bottom: 1.25rem;
+}
+
+[data-theme="dark"] .onboarding-welcome-icon {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.onboarding-welcome-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--color-text-primary, #0f172a);
+  margin-bottom: 0.75rem;
+}
+
+.onboarding-welcome-desc {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #475569);
+  margin-bottom: 1.75rem;
+}
+
+.onboarding-welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.onboarding-welcome-actions .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  border-radius: var(--radius-md, 10px);
+}
+
+/* Tooltip / Tour Step Card */
+.onboarding-tooltip-card {
+  z-index: 10003;
+  background-color: var(--color-surface, #ffffff);
+  color: var(--color-text-primary, #0f172a);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--shadow-lg, 0 10px 25px -5px rgba(0, 0, 0, 0.3));
+  padding: 1.25rem;
+  animation: onboarding-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.onboarding-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.onboarding-step-pill {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 9999px;
+  background-color: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary-dark, #2563eb);
+}
+
+[data-theme="dark"] .onboarding-step-pill {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.onboarding-close-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm, 6px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.onboarding-close-btn:hover,
+.onboarding-close-btn:focus-visible {
+  color: var(--color-text-primary, #0f172a);
+  background-color: var(--color-surface-hover, #f1f5f9);
+  outline: none;
+}
+
+.onboarding-step-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #0f172a);
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+
+.onboarding-step-desc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #475569);
+  margin-bottom: 1.25rem;
+}
+
+.onboarding-tooltip-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-top: 1px solid var(--color-border-subtle, #f1f5f9);
+  padding-top: 0.85rem;
+}
+
+.onboarding-text-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted, #94a3b8);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm, 6px);
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.onboarding-text-btn:hover,
+.onboarding-text-btn:focus-visible {
+  color: var(--color-text-primary, #0f172a);
+  text-decoration: underline;
+  outline: none;
+}
+
+.onboarding-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.onboarding-nav-btns .btn {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 6px);
+}
+
+/* Tour Replay Button in Navbar */
+.navbar-tour-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #475569);
+  background-color: transparent;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navbar-tour-btn:hover,
+.navbar-tour-btn:focus-visible {
+  background-color: var(--color-surface-hover, #f1f5f9);
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary-border, #bfdbfe);
+  outline: none;
+}
+
+[data-theme="dark"] .navbar-tour-btn {
+  border-color: var(--color-border, #334155);
+}
+
+[data-theme="dark"] .navbar-tour-btn:hover,
+[data-theme="dark"] .navbar-tour-btn:focus-visible {
+  background-color: var(--color-surface-hover, #243247);
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, 0.4);
+}
+
+.navbar-tour-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Animations */
+@keyframes onboarding-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes onboarding-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-spotlight-ring,
+  .onboarding-welcome-card,
+  .onboarding-tooltip-card {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Mobile Screens (<= 640px, e.g. 414x896, 375x812, 360x800) */
+@media (max-width: 640px) {
+  .onboarding-tooltip-card {
+    position: fixed !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: calc(100vw - 24px) !important;
+    transform: none !important;
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-md, 12px);
+  }
+
+  .onboarding-tooltip-header {
+    margin-bottom: 0.5rem;
+  }
+
+  .onboarding-step-pill {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+  }
+
+  .onboarding-step-title {
+    font-size: 1.05rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .onboarding-step-desc {
+    font-size: 0.84rem;
+    line-height: 1.45;
+    margin-bottom: 0.85rem;
+  }
+
+  .onboarding-tooltip-footer {
+    padding-top: 0.65rem;
+    gap: 0.35rem;
+  }
+
+  .onboarding-text-btn {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.4rem;
+  }
+
+  .onboarding-nav-btns {
+    gap: 0.35rem;
+  }
+
+  .onboarding-nav-btns .btn {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.82rem;
+  }
+
+  .onboarding-welcome-card {
+    width: 92%;
+    max-width: 360px;
+    padding: 1.5rem 1.25rem;
+    border-radius: var(--radius-md, 14px);
+  }
+
+  .onboarding-welcome-icon {
+    width: 54px;
+    height: 54px;
+    margin-bottom: 1rem;
+  }
+
+  .onboarding-welcome-title {
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .onboarding-welcome-desc {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    margin-bottom: 1.35rem;
+  }
+
+  .onboarding-welcome-actions .btn {
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Extra Compact Mobile (<= 360px viewport width) */
+@media (max-width: 360px) {
+  .onboarding-tooltip-card {
+    left: 8px !important;
+    right: 8px !important;
+    max-width: calc(100vw - 16px) !important;
+    padding: 0.85rem 0.85rem;
+  }
+
+  .onboarding-step-title {
+    font-size: 0.98rem;
+  }
+
+  .onboarding-step-desc {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .onboarding-nav-btns .btn {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .onboarding-welcome-card {
+    width: 94%;
+    padding: 1.25rem 1rem;
+  }
+
+  .onboarding-welcome-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.75rem;
+  }
+
+  .onboarding-welcome-title {
+    font-size: 1.2rem;
+  }
+
+  .onboarding-welcome-desc {
+    font-size: 0.82rem;
+    margin-bottom: 1.15rem;
+  }
+}

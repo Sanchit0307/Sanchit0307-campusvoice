@@ -425,7 +425,7 @@ function DashboardPage() {
         <>
           {/* Moderator View Switcher (Exclusively available when isModerator === true) */}
           {isModerator && (
-            <nav className="dashboard-tab-bar" role="tablist" aria-label="Dashboard Views">
+            <nav className="dashboard-tab-bar" role="tablist" aria-label="Dashboard Views" data-tour="moderator-tabs">
               <button
                 type="button"
                 role="tab"
@@ -711,7 +711,7 @@ function DashboardPage() {
                 /* Populated Dashboard */
                 <section aria-label="Student Proposal Dashboard">
                   {/* Overview Metrics Cards */}
-                  <div className="dashboard-stats-grid">
+                  <div className="dashboard-stats-grid" data-tour="dashboard-stats">
                     <div className="dashboard-stat-card">
                       <div className="dashboard-stat-icon-wrapper" aria-hidden="true">
                         📋

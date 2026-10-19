@@ -78,6 +78,26 @@
   color: var(--color-primary);
 }
 
+.footer-tour-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.footer-tour-btn:hover,
+.footer-tour-btn:focus-visible {
+  color: var(--color-primary);
+  text-decoration: underline;
+  outline: none;
+}
+
+
 .footer-bottom {
   display: flex;
   align-items: center;

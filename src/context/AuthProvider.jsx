@@ -27,6 +27,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(isConfigured)
   const [authError, setAuthError] = useState(null)
   const [isModerator, setIsModerator] = useState(false)
+  const [isRoleLoading, setIsRoleLoading] = useState(false)
+  const [roleResolved, setRoleResolved] = useState(!isConfigured || !auth)
   const latestCheckSeqRef = useRef(0)
 
   useEffect(() => {
@@ -64,6 +66,10 @@ export function AuthProvider({ children }) {
 
         if (currentUser?.uid) {
           const currentSeq = ++latestCheckSeqRef.current
+          if (!isCancelled) {
+            setIsRoleLoading(true)
+            setRoleResolved(false)
+          }
           if (import.meta.env.DEV) {
             console.info(`[AuthDiag] onAuthStateChanged starting check seq #${currentSeq} for user ${maskedUid}`)
           }
@@ -90,16 +96,22 @@ export function AuthProvider({ children }) {
               console.info(`[AuthDiag] onAuthStateChanged setting isModerator=${moderator} (seq #${currentSeq})`)
             }
             setIsModerator(moderator)
+            setIsRoleLoading(false)
+            setRoleResolved(true)
           } catch (err) {
             console.warn('Failed to verify moderator status on auth change:', err)
             if (!isCancelled && currentSeq === latestCheckSeqRef.current) {
               setIsModerator(false)
+              setIsRoleLoading(false)
+              setRoleResolved(true)
             }
           }
         } else {
           latestCheckSeqRef.current++
           if (!isCancelled) {
             setIsModerator(false)
+            setIsRoleLoading(false)
+            setRoleResolved(true)
           }
         }
 
@@ -113,6 +125,8 @@ export function AuthProvider({ children }) {
         if (!isCancelled) {
           setAuthError(error)
           setIsModerator(false)
+          setIsRoleLoading(false)
+          setRoleResolved(true)
           setLoading(false)
         }
       }
@@ -188,6 +202,8 @@ export function AuthProvider({ children }) {
           console.info(`[AuthDiag] signInWithGoogle resolved popup for user: ${maskedUid}`)
         }
         setUser(credential.user)
+        setIsRoleLoading(true)
+        setRoleResolved(false)
         const currentSeq = ++latestCheckSeqRef.current
         try {
           if (import.meta.env.DEV) {
@@ -206,10 +222,14 @@ export function AuthProvider({ children }) {
             console.info(`[AuthDiag] signInWithGoogle setting isModerator=${mod} (seq #${currentSeq})`)
           }
           setIsModerator(mod)
+          setIsRoleLoading(false)
+          setRoleResolved(true)
         } catch (modErr) {
           console.warn('Moderator check error during sign in:', modErr)
           if (currentSeq === latestCheckSeqRef.current) {
             setIsModerator(false)
+            setIsRoleLoading(false)
+            setRoleResolved(true)
           }
         }
       }
@@ -244,6 +264,9 @@ export function AuthProvider({ children }) {
       await signOut(auth)
       setUser(null)
       setIsModerator(false)
+      setIsRoleLoading(false)
+      setRoleResolved(true)
+      latestCheckSeqRef.current++
       setAuthError(null)
     } catch (error) {
       console.error('Sign-out error:', error)
@@ -262,6 +285,8 @@ export function AuthProvider({ children }) {
       refreshModeratorStatus,
       isConfigured,
       isModerator,
+      isRoleLoading,
+      roleResolved,
     }),
     [
       user,
@@ -272,6 +297,8 @@ export function AuthProvider({ children }) {
       refreshModeratorStatus,
       isConfigured,
       isModerator,
+      isRoleLoading,
+      roleResolved,
     ]
   )
 
