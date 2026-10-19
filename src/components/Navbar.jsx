@@ -147,6 +147,16 @@ function Navbar() {
           >
             Dashboard
           </NavLink>
+          {user && (
+            <NavLink
+              to="/profile"
+              className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+              onClick={closeMobileMenu}
+              data-testid="navbar-profile-link"
+            >
+              Profile
+            </NavLink>
+          )}
           {isModerator && (
             <NavLink
               to="/dashboard?tab=moderation-queue"
@@ -197,32 +207,41 @@ function Navbar() {
               </div>
             ) : user ? (
               <div className="navbar-user-profile">
-                {user.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt={user.displayName || 'Authenticated user'}
-                    className="navbar-user-avatar"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div
-                    className="navbar-user-avatar navbar-user-avatar-initials"
-                    aria-hidden="true"
-                  >
-                    {getUserInitials(user.displayName, user.email)}
-                  </div>
-                )}
-
-                <div className="navbar-user-info">
-                  <span className="navbar-user-name">
-                    {user.displayName || user.email?.split('@')[0] || 'Student'}
-                  </span>
-                  {isModerator && (
-                    <span className="navbar-moderator-pill" title="Verified Campus Moderator">
-                      Staff
-                    </span>
+                <Link
+                  to="/profile"
+                  className="navbar-user-profile-link"
+                  onClick={closeMobileMenu}
+                  title="View student profile"
+                  aria-label="View student profile"
+                  data-testid="navbar-profile-avatar-link"
+                >
+                  {user.photoURL ? (
+                    <img
+                      src={user.photoURL}
+                      alt={user.displayName || 'Authenticated user'}
+                      className="navbar-user-avatar"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div
+                      className="navbar-user-avatar navbar-user-avatar-initials"
+                      aria-hidden="true"
+                    >
+                      {getUserInitials(user.displayName, user.email)}
+                    </div>
                   )}
-                </div>
+
+                  <div className="navbar-user-info">
+                    <span className="navbar-user-name">
+                      {user.displayName || user.email?.split('@')[0] || 'Student'}
+                    </span>
+                    {isModerator && (
+                      <span className="navbar-moderator-pill" title="Verified Campus Moderator">
+                        Staff
+                      </span>
+                    )}
+                  </div>
+                </Link>
 
                 <button
                   type="button"

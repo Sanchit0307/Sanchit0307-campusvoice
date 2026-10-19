@@ -126,6 +126,24 @@ describe('Firestore Security Rules Suite', () => {
     })
   }
 
+  // Helper to seed a user profile document
+  async function seedUserProfile(userId = 'student_123', overrideData = {}) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore()
+      await db.collection('users').doc(userId).set({
+        uid: userId,
+        displayName: 'Alex Student',
+        email: 'alex@campus.edu',
+        bio: 'Computer science major enthusiastic about campus sustainability.',
+        department: 'Computer Science',
+        year: 'Junior',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        ...overrideData,
+      })
+    })
+  }
+
   // =========================================================================
   // Requirement 1 & 2: Status updates denied for unauthenticated & ordinary users
   // =========================================================================
@@ -1576,6 +1594,180 @@ describe('Firestore Security Rules Suite', () => {
             description: 'Status changed from Submitted to Under Review',
             injectedExtraKey: 'malicious payload',
           })
+      )
+    })
+  })
+
+  // =========================================================================
+  // Requirement 22: User Profiles Collection Security (users/{userId})
+  // =========================================================================
+  describe('User Profiles Collection Security (users/{userId})', () => {
+    it('22a. Authenticated student can read their own permitted profile', async () => {
+      await seedUserProfile('student_alex')
+      const studentDb = testEnv.authenticatedContext('student_alex').firestore()
+
+      await assertSucceeds(studentDb.collection('users').doc('student_alex').get())
+    })
+
+    it('22b. Authenticated student CANNOT read another student\'s private profile', async () => {
+      await seedUserProfile('student_bob')
+      const studentDb = testEnv.authenticatedContext('student_alex').firestore()
+
+      await assertFails(studentDb.collection('users').doc('student_bob').get())
+    })
+
+    it('22c. Unauthenticated visitor CANNOT read any profile document', async () => {
+      await seedUserProfile('student_alex')
+      const guestDb = testEnv.unauthenticatedContext().firestore()
+
+      await assertFails(guestDb.collection('users').doc('student_alex').get())
+    })
+
+    it('22d. Authenticated student can create their own profile document with valid fields', async () => {
+      const studentDb = testEnv.authenticatedContext('student_create').firestore()
+
+      await assertSucceeds(
+        studentDb.collection('users').doc('student_create').set({
+          uid: 'student_create',
+          displayName: 'Jordan Student',
+          email: 'jordan@campus.edu',
+          bio: 'Campus advocate.',
+          department: 'Environmental Studies',
+          year: 'Senior',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('22e. Authenticated student CANNOT create a profile for another user UID (UID spoofing)', async () => {
+      const studentDb = testEnv.authenticatedContext('student_attacker').firestore()
+
+      await assertFails(
+        studentDb.collection('users').doc('victim_uid').set({
+          uid: 'victim_uid',
+          displayName: 'Spoofed User',
+          email: 'victim@campus.edu',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('22f. Authenticated student CANNOT inject role or unpermitted fields during profile creation', async () => {
+      const studentDb = testEnv.authenticatedContext('student_escalate').firestore()
+
+      await assertFails(
+        studentDb.collection('users').doc('student_escalate').set({
+          uid: 'student_escalate',
+          displayName: 'Escalation Attempt',
+          email: 'escalate@campus.edu',
+          role: 'moderator',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('22g. Authenticated student CANNOT create profile with invalid display name length', async () => {
+      const studentDb = testEnv.authenticatedContext('student_short').firestore()
+
+      // Too short (1 char < 2 chars required)
+      await assertFails(
+        studentDb.collection('users').doc('student_short').set({
+          uid: 'student_short',
+          displayName: 'A',
+          email: 'short@campus.edu',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('22h. Authenticated student can update permitted fields on their own profile', async () => {
+      await seedUserProfile('student_editor')
+      const studentDb = testEnv.authenticatedContext('student_editor').firestore()
+
+      await assertSucceeds(
+        studentDb.collection('users').doc('student_editor').update({
+          displayName: 'Alex Updated',
+          bio: 'Updated bio information.',
+          department: 'Data Science',
+          year: 'Senior',
+          updatedAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('22i. Authenticated student CANNOT update another student\'s profile', async () => {
+      await seedUserProfile('student_victim')
+      const attackerDb = testEnv.authenticatedContext('student_attacker').firestore()
+
+      await assertFails(
+        attackerDb.collection('users').doc('student_victim').update({
+          bio: 'Hacked bio',
+          updatedAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('22j. Authenticated student CANNOT modify protected fields (uid, email, createdAt, role) during update', async () => {
+      await seedUserProfile('student_tamper')
+      const studentDb = testEnv.authenticatedContext('student_tamper').firestore()
+
+      // Attempting to modify email
+      await assertFails(
+        studentDb.collection('users').doc('student_tamper').update({
+          email: 'hacked_email@other.edu',
+          updatedAt: serverTimestamp(),
+        })
+      )
+
+      // Attempting to inject role
+      await assertFails(
+        studentDb.collection('users').doc('student_tamper').update({
+          role: 'moderator',
+          updatedAt: serverTimestamp(),
+        })
+      )
+
+      // Attempting to alter uid
+      await assertFails(
+        studentDb.collection('users').doc('student_tamper').update({
+          uid: 'other_uid',
+          updatedAt: serverTimestamp(),
+        })
+      )
+    })
+
+    it('22k. Authenticated student CANNOT delete their profile document', async () => {
+      await seedUserProfile('student_delete')
+      const studentDb = testEnv.authenticatedContext('student_delete').firestore()
+
+      await assertFails(
+        studentDb.collection('users').doc('student_delete').delete()
+      )
+    })
+
+    it('22l. Unauthenticated visitor CANNOT create or update any profile document', async () => {
+      await seedUserProfile('student_target')
+      const guestDb = testEnv.unauthenticatedContext().firestore()
+
+      await assertFails(
+        guestDb.collection('users').doc('student_target').update({
+          bio: 'Anonymous update',
+          updatedAt: serverTimestamp(),
+        })
+      )
+
+      await assertFails(
+        guestDb.collection('users').doc('new_ghost').set({
+          uid: 'new_ghost',
+          displayName: 'Guest Ghost',
+          email: 'ghost@campus.edu',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
       )
     })
   })
