@@ -344,6 +344,45 @@ describe('ProfilePage Component Suite (Milestone 5: Profile, Activity & Editing)
       const detailLinks = screen.getAllByRole('link', { name: /view details/i })
       expect(detailLinks[0]).toHaveAttribute('href', '/ideas/idea-1')
     })
+
+    it('14b. Searches user ideas by keyword and filters results reactively', async () => {
+      renderProfilePage()
+
+      await waitFor(() => {
+        expect(screen.getByText('24/7 Library Study Lounge Access')).toBeInTheDocument()
+      })
+
+      const searchInput = screen.getByLabelText(/search your submitted proposals/i)
+      fireEvent.change(searchInput, { target: { value: 'Solar' } })
+
+      expect(screen.getByText('Solar Benches on Campus Quad')).toBeInTheDocument()
+      expect(screen.queryByText('24/7 Library Study Lounge Access')).not.toBeInTheDocument()
+      expect(screen.queryByText('Compost Bins in Dining Hall')).not.toBeInTheDocument()
+
+      // Clear search button restores list
+      const clearBtn = screen.getByRole('button', { name: /clear search query/i })
+      fireEvent.click(clearBtn)
+
+      expect(screen.getByText('24/7 Library Study Lounge Access')).toBeInTheDocument()
+      expect(screen.getByText('Solar Benches on Campus Quad')).toBeInTheDocument()
+    })
+
+    it('14c. Sorts user ideas by upvotes on demand', async () => {
+      renderProfilePage()
+
+      await waitFor(() => {
+        expect(screen.getByText('24/7 Library Study Lounge Access')).toBeInTheDocument()
+      })
+
+      const sortSelect = screen.getByLabelText(/sort your submitted proposals/i)
+      fireEvent.change(sortSelect, { target: { value: 'upvotes' } })
+
+      const detailLinks = screen.getAllByRole('link', { name: /view details/i })
+      // sampleIdeas: idea-2 has 30 upvotes, idea-1 has 15, idea-3 has 5
+      expect(detailLinks[0]).toHaveAttribute('href', '/ideas/idea-2')
+      expect(detailLinks[1]).toHaveAttribute('href', '/ideas/idea-1')
+      expect(detailLinks[2]).toHaveAttribute('href', '/ideas/idea-3')
+    })
   })
 
   describe('Issue #13: Profile Editing & Privacy Controls', () => {

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context'
 import { getUserIdeas, IDEA_STATUSES } from '../services/ideasService'
+import { filterAndSortIdeas } from '../utils/ideaFilters'
 import {
   getUserProfile,
   saveUserProfile,
@@ -39,6 +40,8 @@ function ProfilePage() {
   const [ideasLoading, setIdeasLoading] = useState(true)
   const [ideasError, setIdeasError] = useState(null)
   const [statusFilter, setStatusFilter] = useState('All')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('default')
 
   // Guest sign-in state
   const [isSigningIn, setIsSigningIn] = useState(false)
@@ -120,6 +123,8 @@ function ProfilePage() {
       setIdeasLoading(false)
       setIdeasError(null)
       setStatusFilter('All')
+      setSearchQuery('')
+      setSortBy('default')
       setIsEditing(false)
       setFormData({
         displayName: '',
@@ -145,6 +150,8 @@ function ProfilePage() {
     setIdeasLoading(true)
     setIdeasError(null)
     setStatusFilter('All')
+    setSearchQuery('')
+    setSortBy('default')
     setIsEditing(false)
     setFormData({
       displayName: '',
@@ -318,11 +325,14 @@ function ProfilePage() {
     return sum + count
   }, 0)
 
-  // Filter ideas by selected status
+  // Filter and sort ideas by selected status, search query, and sort option
   const filteredIdeas = useMemo(() => {
-    if (statusFilter === 'All') return ideas
-    return ideas.filter((idea) => idea.status === statusFilter)
-  }, [ideas, statusFilter])
+    return filterAndSortIdeas(ideas, {
+      searchQuery,
+      selectedStatus: statusFilter,
+      sortBy,
+    })
+  }, [ideas, searchQuery, statusFilter, sortBy])
 
   return (
     <div className="page-container profile-page">
@@ -756,6 +766,50 @@ function ProfilePage() {
               </Link>
             </div>
 
+            {/* Search and Sort Toolbar */}
+            {ideas.length > 0 && (
+              <div className="profile-search-sort-bar">
+                <div className="profile-search-wrap">
+                  <span className="profile-search-icon" aria-hidden="true">🔍</span>
+                  <input
+                    type="search"
+                    className="profile-search-input"
+                    placeholder="Search your proposals..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Search your submitted proposals"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      className="profile-search-clear-btn"
+                      onClick={() => setSearchQuery('')}
+                      aria-label="Clear search query"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="profile-sort-wrap">
+                  <label htmlFor="profile-sort-select" className="profile-sort-label">
+                    Sort:
+                  </label>
+                  <select
+                    id="profile-sort-select"
+                    className="profile-sort-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    aria-label="Sort your submitted proposals"
+                  >
+                    <option value="default">Default</option>
+                    <option value="newest">Newest First</option>
+                    <option value="upvotes">Most Upvoted</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
             {/* Status Filter Tabs */}
             <div className="profile-filter-bar" role="tablist" aria-label="Filter ideas by status">
               <button
@@ -809,15 +863,35 @@ function ProfilePage() {
               </div>
             ) : filteredIdeas.length === 0 ? (
               <EmptyState
-                title={statusFilter === 'All' ? 'No Ideas Submitted Yet' : `No "${statusFilter}" Ideas`}
-                description={
-                  statusFilter === 'All'
-                    ? "You haven't posted any campus improvement ideas yet. Propose your first idea to rally community support!"
-                    : `You have no submitted proposals currently in the "${statusFilter}" status.`
+                title={
+                  ideas.length === 0
+                    ? 'No Ideas Submitted Yet'
+                    : searchQuery
+                      ? 'No Matching Ideas'
+                      : `No "${statusFilter}" Ideas`
                 }
-                actionText={statusFilter === 'All' ? 'Submit an Idea' : 'Clear Filter'}
-                actionLink={statusFilter === 'All' ? '/submit' : undefined}
-                onClick={statusFilter !== 'All' ? () => setStatusFilter('All') : undefined}
+                description={
+                  ideas.length === 0
+                    ? "You haven't posted any campus improvement ideas yet. Propose your first idea to rally community support!"
+                    : searchQuery
+                      ? `No submitted proposals match "${searchQuery}".`
+                      : `You have no submitted proposals currently in the "${statusFilter}" status.`
+                }
+                actionText={
+                  ideas.length === 0
+                    ? 'Submit an Idea'
+                    : searchQuery
+                      ? 'Clear Search'
+                      : 'Clear Filter'
+                }
+                actionLink={ideas.length === 0 ? '/submit' : undefined}
+                onClick={
+                  ideas.length === 0
+                    ? undefined
+                    : searchQuery
+                      ? () => setSearchQuery('')
+                      : () => setStatusFilter('All')
+                }
               />
             ) : (
               <div className="profile-ideas-grid" data-testid="profile-ideas-grid">

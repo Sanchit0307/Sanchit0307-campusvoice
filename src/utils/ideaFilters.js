@@ -129,6 +129,10 @@ export function filterAndSortIdeas(ideas = [], {
   })
 
   // 4. Local sorting (non-mutating)
+  if (sortBy === 'default') {
+    return matchingIdeas
+  }
+
   return matchingIdeas.sort((a, b) => {
     if (sortBy === 'upvotes') {
       const votesDiff = getIdeaVoteCount(b) - getIdeaVoteCount(a)
