@@ -6,7 +6,7 @@
 
 🌐 **Live Demo:** [sanchit0307-campusvoice.vercel.app](https://sanchit0307-campusvoice.vercel.app/)
 
-## Table of Contents
+ Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
