@@ -1,261 +1,203 @@
-# CampusVoice — Student Ideas & Suggestions Portal
+[README_CampusVoice.md](https://github.com/user-attachments/files/33778669/README_CampusVoice.md)
 
-A full-stack web application developed for **TechSpace BuildLab '26** (Solo Beginner Track). CampusVoice empowers students to propose campus improvement ideas, browse and upvote community suggestions, track ideas through their review and implementation lifecycle, and enables campus moderators to review, analyze, and transition proposals transparently.
+# CampusVoice
 
----
+**CampusVoice** is a campus ideas portal where students can submit proposals, discover ideas from peers, upvote suggestions, and follow an idea's progress.
 
-## Tech Stack
+🌐 **Live Demo:** [sanchit0307-campusvoice.vercel.app](https://sanchit0307-campusvoice.vercel.app/)
 
-- **Frontend**: React 19 (JavaScript, ES Modules)
-- **Routing**: React Router v7
-- **Tooling & Dev Server**: Vite 8
-- **Styling**: Vanilla CSS (Semantic design token system with light and dark theme foundations)
-- **Backend & Database**: Firebase Authentication (Google Auth) & Cloud Firestore
-- **Testing**: Vitest, React Testing Library, JSDOM, `@firebase/rules-unit-testing`
-- **Linting**: Oxlint
-- **Version Control**: Git & GitHub
+## Table of Contents
 
----
+- [Overview](#overview)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [Firebase Setup](#firebase-setup)
+- [Scripts](#scripts)
+- [Project Structure](#project-structure)
+- [Deployment](#deployment)
+- [Security Notes](#security-notes)
+- [Contributing](#contributing)
 
-## Core Features
+## Overview
 
-1. **Campus Ideas Portal & Discovery**:
-   - Browse student proposals with category pills, status indicators, and community upvote counts.
-   - Real-time search across proposal titles and descriptions.
-   - Multi-facet filtering by campus category (Academics, Facilities, Dining, Sustainability, Transportation, Campus Life, Wellness).
-   - Lifecycle status filtering (Submitted, Under Review, In Progress, Accepted, Implemented, Rejected).
-   - Multi-mode sorting (Newest first, Most upvoted).
+CampusVoice provides a central place for campus community members to submit ideas and engage with proposals. It is built with React and Vite, uses Firebase Authentication for sign-in, stores application data in Cloud Firestore, and is hosted on Vercel.
 
-2. **Idea Proposal Submission**:
-   - Clean, accessible submission form with client-side length, required-field, and category validation.
-   - Supports authenticated submissions linked to student UID and anonymous submissions.
-   - Automatically initializes durable status timeline with atomic Firestore batch writes.
+## Features
 
-3. **Secure Community Upvoting**:
-   - Atomic toggle upvote system enforced via `/ideas/{ideaId}/votes/{userId}` subcollection rules.
-   - Real-time vote count derivation with optimistic UI feedback and guest sign-in prompts.
+- Browse ideas submitted by the campus community
+- Submit campus proposals
+- Upvote ideas and engage with community suggestions
+- Track ideas through a status lifecycle: Submitted, Under Review, Accepted, In Progress, and Implemented
+- View idea status history
+- Receive application notifications
+- Role-aware navigation and onboarding
+- Moderator analytics dashboard
+- Student profiles, editable profile fields, privacy settings, and idea activity
+- Search profile activity by title or description and sort supported lists
+- Dark-themed interface
 
-4. **Idea Status Timeline & Audit Trail**:
-   - Durable status transition history stored in immutable per-idea subcollections (`/ideas/{ideaId}/statusHistory`).
-   - Visual lifecycle timeline rendering chronological status transitions, actor attribution, and timestamps.
+Feature availability and permissions depend on the current implementation and Firebase security rules.
 
-5. **In-App Notification System**:
-   - Real-time notification bell with dynamic unread badge counter.
-   - Automatic notification dispatch on proposal status transitions and moderator actions.
-   - Dropdown menu with mark-as-read controls and direct links to affected proposals.
+## Technology Stack
 
-6. **Moderator Management & Moderation Queue**:
-   - Strict role-based access control verified via `/moderators/{userId}` Firestore documents.
-   - Dedicated Moderation Queue tab allowing authorized campus moderators to review proposals, advance review stages, reject, or safely delete proposals with confirmation modals.
-
-7. **Moderator Analytics Dashboard**:
-   - Comprehensive metrics: Total proposals, active proposals, completion rate, community engagement.
-   - Date range presets (All Time, 7 Days, 30 Days, 90 Days, Custom Range).
-   - Visual distribution charts: Status breakdown, category distribution, and submission trends over time.
-
-8. **Student Profile, Activity & Privacy**:
-   - Student profile overview displaying authenticated photo/initials, department, academic year, and bio.
-   - Secure profile editing with strict client-side validation and Firestore field-level write constraints.
-   - Student Idea Activity section displaying only the student's authored proposals with integrated search, status filtering, and sorting.
-   - Private profile security rules ensuring only the profile owner can read or write their personal profile document.
-
-9. **Interactive Role-Aware Onboarding Walkthrough**:
-   - First-time login onboarding guide explaining navigation, idea browsing, upvoting, and submission.
-   - Role-aware adaptation: highlights moderation queue and analytics for campus staff.
-   - Non-blocking, keyboard accessible (Escape to dismiss), mobile-optimized, and re-playable anytime from the Navbar.
-
-10. **Design System & Theme Engine**:
-    - Semantic CSS variables for light and dark modes activated via `data-theme` on the document root.
-    - Fully responsive across desktop, tablet, and mobile viewports (down to 360px).
-
----
-
-## Project Structure
-
-```text
-campusvoice/
-├── public/                 # Static assets (favicons, icons)
-├── src/                    # Application source code
-│   ├── assets/             # SVG and image assets
-│   ├── components/         # Reusable presentation and interactive components
-│   │   ├── analytics/      # Moderator analytics dashboard, charts, and filter bar
-│   │   ├── onboarding/     # Role-aware onboarding walkthrough, modal, and steps
-│   │   ├── DeleteConfirmationModal.jsx # Destructive action confirmation dialog
-│   │   ├── EmptyState.jsx  # Context-aware empty state component
-│   │   ├── Footer.jsx      # Application footer
-│   │   ├── IdeaCard.jsx    # Proposal card with category badge and upvote button
-│   │   ├── IdeaStatusTimeline.jsx # Visual audit trail and lifecycle timeline
-│   │   ├── Layout.jsx      # Application layout shell with sticky navbar and footer
-│   │   ├── Navbar.jsx      # Top navigation with theme toggle and notifications
-│   │   ├── NotificationBell.jsx # Notification trigger and unread dropdown
-│   │   ├── SignInPromptModal.jsx # Guest authentication prompt dialog
-│   │   ├── ThemeToggle.jsx # Light/dark mode toggle button
-│   │   └── UpvoteButton.jsx # Interactive community voting button
-│   ├── context/            # React context providers (Auth, Theme, Onboarding)
-│   ├── firebase/           # Firebase SDK initialization and emulator detection
-│   ├── pages/              # Top-level page views
-│   │   ├── DashboardPage.jsx # Student hub, moderation queue, and analytics tabs
-│   │   ├── HomePage.jsx    # Hero landing page and platform highlights
-│   │   ├── IdeaDetailPage.jsx # Full proposal view, timeline, and moderator workflow
-│   │   ├── IdeasPage.jsx   # Public ideas catalog with search, filter, and sorting
-│   │   ├── NotFoundPage.jsx # 404 error page
-│   │   ├── ProfilePage.jsx # Student profile, bio editor, and idea activity
-│   │   └── SubmitIdeaPage.jsx # New proposal submission form
-│   ├── services/           # Firestore data services (ideas, profile, notifications, analytics)
-│   ├── utils/              # Pure utility functions (filters, validation, timestamps)
-│   ├── App.jsx             # Top-level route configuration
-│   ├── index.css           # Global design tokens and base styles
-│   └── main.jsx            # Application entry point
-├── tests/                  # Automated test suites
-│   ├── components/         # React Testing Library component tests
-│   ├── rules/              # Firestore emulator security rules tests
-│   └── unit/               # Vitest pure service and utility unit tests
-├── firestore.rules         # Production Cloud Firestore Security Rules
-├── firestore.indexes.json  # Composite Firestore index specifications
-├── firebase.json           # Firebase configuration for Firestore & emulators
-├── package.json            # Project dependencies and test scripts
-├── vite.config.js          # Vite bundler configuration
-├── SECURITY_TESTS.md       # Firestore security test matrix and audit documentation
-└── README.md               # Project documentation
-```
-
----
-
-## Security Model & Firestore Rules
-
-All client read and write operations are strictly governed by `firestore.rules`:
-
-- **`/ideas/{ideaId}`**:
-  - `read`: Publicly readable by guests and authenticated users.
-  - `create`: Enforces valid 9-field schema, required title/desc/category, canonical status (`Submitted`), initial zero upvotes, and immutable authorId.
-  - `update`: Ordinary users cannot mutate proposals. Only verified moderators can update `status` and `updatedAt` (validated with `request.time`).
-  - `delete`: Restricted exclusively to verified moderators for content cleanup.
-- **`/ideas/{ideaId}/votes/{userId}`**:
-  - `read`: Publicly readable.
-  - `create`: User can only vote for their own authenticated UID (`request.auth.uid == userId`); duplicate votes denied.
-  - `delete`: User can only delete their own vote document (toggle unvote).
-  - `update`: Strictly denied (votes are immutable).
-- **`/ideas/{ideaId}/statusHistory/{historyId}`**:
-  - `read`: Publicly readable.
-  - `create`: Enforces valid transition history schema, valid canonical statuses, matching ideaId, actor attribution, and trusted server timestamp.
-  - `update`: Strictly denied (history is an immutable audit log).
-  - `delete`: Denied to students; permitted to moderators for proposal deletion cleanup.
-- **`/moderators/{userId}`**:
-  - `read`: Authenticated users can check their own moderator status.
-  - `write`: Strictly denied to all client actors (assigned exclusively via Firebase console or Admin SDK).
-- **`/users/{userId}`**:
-  - `read`: Restricted strictly to the profile owner (`request.auth.uid == userId`).
-  - `create` & `update`: Restricted strictly to the profile owner for permitted fields only (`displayName`, `bio`, `department`, `year`, `updatedAt`). Protected fields (`uid`, `email`, `role`, `createdAt`) cannot be tampered with.
-  - `delete`: Denied to client actors.
-- **`/notifications/{notificationId}`**:
-  - Enforces per-recipient access control; users can only read and mark as read their own notifications.
-
----
+| Area | Technology |
+|---|---|
+| UI | React 19 |
+| Build tool | Vite |
+| Language | JavaScript (ES modules) |
+| Styling | CSS |
+| Authentication | Firebase Authentication |
+| Database | Cloud Firestore |
+| Hosting | Vercel |
+| Testing | Vitest and project test suites |
 
 ## Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or newer recommended, developed on Node v24)
-- [npm](https://www.npmjs.com/)
-- [Java JRE/JDK](https://www.java.com/) (optional, only required if running local Firebase Firestore emulator)
+- Node.js (current LTS recommended)
+- npm
+- A Firebase project configured for Authentication and Cloud Firestore
 
-### Installation
+### 1. Clone the repository
 
-Clone the repository and install dependencies:
+```bash
+git clone https://github.com/Sanchit0307/campus-ideas-portal.git
+cd campus-ideas-portal
+```
+
+If you are using a different fork or repository, replace the URL with its clone URL.
+
+### 2. Install dependencies
 
 ```bash
 npm install
 ```
 
-### Environment Configuration
+### 3. Configure environment variables
 
-Create a `.env.local` file in the root directory with your Firebase Web App credentials:
+Create a `.env.local` file in the project root and add the variables listed below, using values from your own Firebase project.
 
-```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-```
-
-### Development Server
-
-Run the local Vite development server with Hot Module Replacement (HMR):
+### 4. Run locally
 
 ```bash
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Vite prints the local development URL in your terminal, typically `http://localhost:5173`.
 
----
-
-## Verification & Testing
-
-The project maintains comprehensive test coverage across unit logic, component interactions, and Firestore security rules:
-
-### 1. Unit & Component Tests
-
-Run the complete Vitest test suite (309 passing tests):
-
-```bash
-npm test
-```
-
-### 2. Firestore Security Rules Tests
-
-Execute the 80 automated security scenarios against the local Firestore Emulator:
-
-```bash
-npm run test:rules
-```
-
-### 3. Static Code Analysis (Lint)
-
-Run the fast linter to verify zero warnings and zero errors across all files:
-
-```bash
-npm run lint
-```
-
-### 4. Production Build
-
-Compile and validate the optimized production bundle:
+### 5. Build and preview
 
 ```bash
 npm run build
-```
-
-Preview the production build locally:
-
-```bash
 npm run preview
 ```
 
----
+## Environment Variables
 
-## Development Roadmap
+The frontend expects these Vite variables:
 
-- [x] #1 Project Setup & Architecture
-- [x] #2 Application Shell & Navigation
-- [x] #3 Ideas Listing
-- [x] #4 Idea Submission
-- [x] #5 Idea Detail
-- [x] #6 Categories & Filtering
-- [x] #7 Upvoting
-- [x] #8 Authentication
-- [x] #9 Database Schema
-- [x] #10 Data/API Layer
-- [x] #11 User Dashboard
-- [x] #12 Moderator Dashboard
-- [x] #13 Idea Status Workflow
-- [x] #14 Search & Sorting
-- [x] #15 Analytics
-- [x] #16 Notifications
-- [x] #17 Responsive/Mobile Improvements
-- [x] #18 Testing & Bug Fixes
-- [x] #19 Deployment
-- [x] #20 Documentation
+```dotenv
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_FIREBASE_MEASUREMENT_ID=
+```
+
+Get the values from **Firebase Console → Project settings → General → Your apps**. Do not commit `.env.local`, service-account JSON files, private keys, or other server-side secrets.
+
+Variables prefixed with `VITE_` are included in the browser bundle. Firebase web configuration is not a substitute for security; protect data with Firestore Security Rules and appropriate API restrictions.
+
+## Firebase Setup
+
+1. Create or select a Firebase project and register a web app.
+2. Add its configuration to `.env.local`.
+3. Enable the sign-in provider(s) used by the application under **Authentication → Sign-in method**.
+4. Add your development and production hostnames under **Authentication → Settings → Authorized domains**. The live hostname is `sanchit0307-campusvoice.vercel.app`; enter only the hostname, without `https://` or a trailing slash.
+5. Configure Cloud Firestore and review the project's rules and indexes before deployment.
+
+Review `firestore.rules`, `firestore.indexes.json`, and `firebase.json` before deploying to a different Firebase project. Do not weaken security rules just to suppress an error.
+
+## Scripts
+
+These scripts are used by the project; confirm the exact names in `package.json` for your checked-out branch.
+
+```bash
+npm run dev
+npm run build
+npm run preview
+npm test
+npm run lint
+npm run test:rules
+```
+
+- `npm run dev` starts the Vite development server.
+- `npm run build` builds the production frontend.
+- `npm run preview` serves the production build locally.
+- `npm test`, `npm run lint`, and `npm run test:rules` run the corresponding checks if those scripts are available in your branch.
+
+## Project Structure
+
+```text
+.
+├── public/                 # Static assets
+├── src/
+│   ├── pages/              # Application pages
+│   └── utils/              # Shared utilities
+├── tests/                  # Automated tests
+├── firebase.json           # Firebase CLI configuration
+├── firestore.indexes.json  # Firestore indexes
+├── firestore.rules         # Firestore security rules
+├── index.html
+├── package.json
+├── vercel.json             # Vercel SPA routing configuration
+└── vite.config.js
+```
+
+The exact contents may evolve as the project develops.
+
+## Deployment
+
+The live application is hosted on Vercel:
+
+**[Open CampusVoice](https://sanchit0307-campusvoice.vercel.app/)**
+
+To deploy your own instance:
+
+1. Import the repository into Vercel.
+2. Select **Vite** as the framework preset.
+3. Use `npm run build` as the build command and `dist` as the output directory.
+4. Add all required `VITE_FIREBASE_*` environment variables in Vercel for the appropriate environments.
+5. Add the deployed hostname to Firebase Authentication's authorized domains.
+6. Deploy and test sign-in, idea submission, upvoting, profile updates, and refresh persistence.
+
+The repository's `vercel.json` contains a rewrite to `/index.html` for client-side routing. Keep it unless the routing/deployment setup changes.
+
+## Security Notes
+
+- Never commit `.env.local`, service-account credentials, private keys, or other server-side secrets.
+- Anything prefixed with `VITE_` is exposed to the browser; do not put secrets there.
+- Enforce authorization with Firestore Security Rules, not only in the UI.
+- Re-test security rules when changing profile fields, roles, status transitions, or user-generated content.
+- Run relevant tests and a production build before deploying.
+
+## Contributing
+
+1. Open or select an issue describing the change.
+2. Create a focused feature branch.
+3. Implement the change and add or update tests where appropriate.
+4. Run the available checks and production build.
+5. Open a pull request with a clear summary and test results.
+
+Avoid committing personal data, credentials, or unrelated generated files.
+
+## Project Status
+
+CampusVoice is deployed, and the current live deployment has been manually checked for sign-in and persistence after updates. Features and setup instructions may evolve.
+
+**Live Demo:** https://sanchit0307-campusvoice.vercel.app/
