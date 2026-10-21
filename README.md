@@ -6,7 +6,7 @@
 
 🌐 **Live Demo:** [sanchit0307-campusvoice.vercel.app](https://sanchit0307-campusvoice.vercel.app/)
 
- Table of Contents
+ ##Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -200,4 +200,4 @@ Avoid committing personal data, credentials, or unrelated generated files.
 
 CampusVoice is deployed, and the current live deployment has been manually checked for sign-in and persistence after updates. Features and setup instructions may evolve.
 
-**Live Demo:** https://sanchit0307-campusvoice.vercel.app/
+**Live Demo of the Website:** https://sanchit0307-campusvoice.vercel.app/
