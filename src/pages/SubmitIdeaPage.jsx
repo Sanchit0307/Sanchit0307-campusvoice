@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { IDEA_CATEGORIES } from '../data/mockIdeas'
 import { createIdea } from '../services/ideasService'
+import { suggestCategory } from '../services/aiService'
 import { useAuth } from '../context'
 import {
   validateIdeaSubmission,
@@ -25,6 +26,26 @@ function SubmitIdeaPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+
+  // AI Suggestion state
+  const [isSuggesting, setIsSuggesting] = useState(false)
+  const [aiSuggestion, setAiSuggestion] = useState(null)
+  const [aiError, setAiError] = useState(null)
+  const requestIdRef = useRef(0)
+  const abortControllerRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
+
+  const canSuggest =
+    formData.title.trim().length >= 3 &&
+    formData.description.trim().length >= 10 &&
+    !isSuggesting
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -91,7 +112,75 @@ function SubmitIdeaPage() {
     }
   }
 
+  const handleSuggestCategory = async () => {
+    if (isSuggesting) return
+
+    const trimmedTitle = formData.title.trim()
+    const trimmedDesc = formData.description.trim()
+
+    if (trimmedTitle.length < 3 || trimmedDesc.length < 10) {
+      setAiError('Please enter a title (3+ chars) and description (10+ chars) before requesting an AI suggestion.')
+      return
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
+    const currentReqId = ++requestIdRef.current
+    setIsSuggesting(true)
+    setAiError(null)
+
+    try {
+      const result = await suggestCategory({
+        title: trimmedTitle,
+        description: trimmedDesc,
+        signal: controller.signal,
+      })
+
+      // Stale response guard: ensure request sequence and current form content still match
+      if (currentReqId === requestIdRef.current) {
+        setFormData((prev) => {
+          if (
+            prev.title.trim() === trimmedTitle &&
+            prev.description.trim() === trimmedDesc
+          ) {
+            setAiSuggestion(result)
+            if (IDEA_CATEGORIES.includes(result.category)) {
+              setErrors((errs) => {
+                const next = { ...errs }
+                delete next.category
+                return next
+              })
+              return {
+                ...prev,
+                category: result.category,
+              }
+            }
+          }
+          return prev
+        })
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return
+      }
+      if (currentReqId === requestIdRef.current) {
+        setAiError(err.message || 'Unable to suggest a category at this time.')
+      }
+    } finally {
+      if (currentReqId === requestIdRef.current) {
+        setIsSuggesting(false)
+      }
+    }
+  }
+
   const handleResetForm = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
     setFormData({
       title: '',
       category: '',
@@ -102,6 +191,9 @@ function SubmitIdeaPage() {
     setIsSuccess(false)
     setIsSubmitting(false)
     setSubmitError(null)
+    setIsSuggesting(false)
+    setAiSuggestion(null)
+    setAiError(null)
   }
 
   return (
@@ -227,12 +319,77 @@ function SubmitIdeaPage() {
 
               {/* Category Field */}
               <div className="form-group">
-                <label htmlFor="idea-category" className="form-label">
-                  Category <span className="required-star" aria-hidden="true">*</span>
-                </label>
+                <div className="category-header-row">
+                  <label htmlFor="idea-category" className="form-label">
+                    Category <span className="required-star" aria-hidden="true">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    id="suggest-category-btn"
+                    className="btn-suggest-category"
+                    onClick={handleSuggestCategory}
+                    disabled={!canSuggest}
+                    aria-busy={isSuggesting}
+                    title={
+                      canSuggest
+                        ? 'Suggest category using Gemini AI'
+                        : 'Enter at least 3 characters for title and 10 characters for description to enable AI suggestion'
+                    }
+                  >
+                    {isSuggesting ? (
+                      <>
+                        <span className="ai-spinner" aria-hidden="true" />
+                        <span>Analyzing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="ai-sparkle-icon" aria-hidden="true">✨</span>
+                        <span>Suggest Category</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <p className="form-hint" id="category-hint">
                   Choose the campus area your proposal directly impacts.
                 </p>
+
+                {aiSuggestion && (
+                  <div className="ai-suggestion-badge" role="status" aria-live="polite">
+                    <div className="ai-suggestion-top">
+                      <span className="ai-sparkle-icon" aria-hidden="true">✨</span>
+                      <span className="ai-suggestion-title">
+                        AI Suggestion: <strong>{aiSuggestion.category}</strong>
+                      </span>
+                      {aiSuggestion.confidence && (
+                        <span className="ai-confidence-pill">
+                          {Math.round(aiSuggestion.confidence * 100)}% match
+                        </span>
+                      )}
+                      {formData.category !== aiSuggestion.category && (
+                        <span className="ai-overridden-pill">Manually Changed</span>
+                      )}
+                    </div>
+                    {aiSuggestion.reasoning && (
+                      <p className="ai-reasoning-desc">{aiSuggestion.reasoning}</p>
+                    )}
+                  </div>
+                )}
+
+                {aiError && (
+                  <div className="ai-error-alert" role="alert">
+                    <span className="ai-error-icon" aria-hidden="true">⚠️</span>
+                    <span className="ai-error-text">{aiError}</span>
+                    <button
+                      type="button"
+                      className="ai-error-close-btn"
+                      onClick={() => setAiError(null)}
+                      aria-label="Dismiss error notice"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                )}
+
                 <div className="select-wrapper">
                   <select
                     id="idea-category"
