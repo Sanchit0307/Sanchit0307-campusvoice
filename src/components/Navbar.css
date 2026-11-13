@@ -1,20 +1,25 @@
+/* ==========================================================================
+   CampusVoice Navbar Component
+   Restrained, modern university civic-tech navigation bar
+   ========================================================================== */
+
 .navbar-header {
   position: sticky;
   top: 0;
   z-index: 100;
   background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .navbar-container {
-  max-width: 1240px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
   flex-wrap: nowrap;
 }
 
@@ -22,11 +27,11 @@
 .navbar-brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
   text-decoration: none;
   color: var(--color-text-primary);
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   letter-spacing: -0.02em;
   flex-shrink: 0;
   white-space: nowrap;
@@ -36,12 +41,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  width: 32px;
+  height: 32px;
+  background-color: var(--color-primary);
   color: #ffffff;
-  border-radius: var(--radius-md);
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25);
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
 
@@ -49,26 +53,28 @@
   font-weight: 700;
   color: var(--color-text-primary);
   white-space: nowrap;
+  letter-spacing: -0.02em;
 }
 
 .brand-tag {
   display: inline-block;
-  font-size: 0.7rem;
+  font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--color-primary-text, var(--color-primary-dark));
+  color: var(--color-primary-text, var(--color-primary));
   background-color: var(--color-primary-light);
   padding: 0.15rem 0.45rem;
-  border-radius: 9999px;
-  border: 1px solid var(--color-primary-border, #bfdbfe);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-primary-border);
   white-space: nowrap;
   flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 /* Navigation Links */
 .navbar-nav {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
   flex-wrap: nowrap;
   flex-shrink: 0;
 }
@@ -80,20 +86,20 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-secondary);
-  padding: 0.45rem 0.65rem;
+  padding: 0.4rem 0.75rem;
   border-radius: var(--radius-md);
-  transition: all 0.2s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .nav-link:hover {
-  color: var(--color-primary);
-  background-color: var(--color-primary-light);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-hover);
 }
 
 .nav-link.active {
-  color: var(--color-primary-text, var(--color-primary-dark));
+  color: var(--color-primary);
   background-color: var(--color-primary-light);
   font-weight: 600;
 }
@@ -102,7 +108,7 @@
 .navbar-auth-section {
   display: flex;
   align-items: center;
-  margin-left: 0.35rem;
+  margin-left: 0.5rem;
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -112,9 +118,10 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.35rem 0.65rem;
-  background-color: var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  font-size: 0.8rem;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
   color: var(--color-text-muted);
   white-space: nowrap;
   flex-shrink: 0;
@@ -142,12 +149,12 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.35rem 0.65rem;
-  background-color: #fffbeb;
-  border: 1px solid #fef3c7;
-  border-radius: var(--radius-md);
-  font-size: 0.78rem;
+  background-color: var(--color-warning-light);
+  border: 1px solid rgba(229, 154, 42, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
   font-weight: 500;
-  color: #b45309;
+  color: var(--color-warning);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -160,46 +167,45 @@
 }
 
 .auth-dot.is-warning {
-  background-color: #f59e0b;
+  background-color: var(--color-warning);
 }
 
 .navbar-signin-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.8rem;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-text-primary);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .navbar-signin-btn:hover:not(:disabled) {
-  background-color: var(--color-border-subtle);
-  border-color: var(--color-border-hover, #cbd5e1);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
 }
 
 .navbar-signin-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* User Profile Badge */
+/* User Profile Badge (Restrained Architectural Style) */
 .navbar-user-profile {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.2rem 0.45rem 0.2rem 0.3rem;
-  background-color: var(--color-border-subtle);
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem 0.2rem 0.3rem;
+  background-color: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
-  border-radius: 9999px;
+  border-radius: var(--radius-md);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -211,7 +217,7 @@
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  border-radius: 9999px;
+  border-radius: var(--radius-sm);
   transition: opacity 0.15s ease;
 }
 
@@ -220,11 +226,11 @@
 }
 
 .navbar-user-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
   object-fit: cover;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -232,37 +238,38 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  background-color: var(--color-primary);
   color: #ffffff;
   font-size: 0.75rem;
   font-weight: 700;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
 
 .navbar-user-info {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  gap: 0.375rem;
 }
 
 .navbar-user-name {
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-text-primary);
-  max-width: 95px;
+  max-width: 100px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .navbar-moderator-pill {
-  font-size: 0.65rem;
+  font-size: 0.6875rem;
   font-weight: 700;
-  color: #4338ca;
-  background-color: #eef2ff;
-  border: 1px solid #c7d2fe;
-  border-radius: 9999px;
-  padding: 0.05rem 0.35rem;
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-xs);
+  padding: 0.05rem 0.3rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   width: fit-content;
@@ -276,17 +283,17 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-text-muted);
-  padding: 0.2rem 0.4rem;
-  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.35rem;
+  border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .navbar-signout-btn:hover:not(:disabled) {
-  color: #ef4444;
-  background-color: #fee2e2;
+  color: var(--color-danger);
+  background-color: var(--color-danger-light);
 }
 
 .navbar-signout-btn:disabled {
@@ -296,7 +303,7 @@
 
 /* Call to action button in navbar */
 .navbar-actions {
-  margin-left: 0.35rem;
+  margin-left: 0.5rem;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -305,31 +312,31 @@
 .navbar-cta-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.35rem;
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: #ffffff;
   background-color: var(--color-primary);
-  padding: 0.45rem 0.8rem;
+  padding: 0.45rem 0.875rem;
   border-radius: var(--radius-md);
-  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.2);
-  transition: all 0.2s ease;
+  border: 1px solid var(--color-primary);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .navbar-cta-btn:hover {
   background-color: var(--color-primary-dark);
-  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
+  border-color: var(--color-primary-dark);
 }
 
 .cta-icon {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   line-height: 1;
 }
 
-/* Right Controls (Theme Toggle & Mobile Menu) */
+/* Right Controls (Tour, Theme Toggle, Notification Bell & Mobile Hamburger) */
 .navbar-right-controls {
   display: flex;
   align-items: center;
@@ -337,35 +344,65 @@
   flex-shrink: 0;
 }
 
+.navbar-tour-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.navbar-tour-btn:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+}
+
+.navbar-tour-icon {
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
 /* Mobile Menu Toggle Button */
 .mobile-menu-btn {
   display: none;
   flex-direction: column;
   justify-content: space-around;
-  width: 32px;
-  height: 32px;
-  background: transparent;
+  width: 34px;
+  height: 34px;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 6px 5px;
+  border-radius: var(--radius-md);
+  padding: 8px 6px;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.mobile-menu-btn:hover {
+  background-color: var(--color-surface-hover);
 }
 
 .hamburger-bar {
   width: 100%;
   height: 2px;
   background-color: var(--color-text-primary);
-  border-radius: 2px;
-  transition: all 0.25s ease;
+  border-radius: 1px;
+  transition: all 0.2s ease;
 }
 
 /* Feedback Error Bar */
 .navbar-auth-error-bar {
-  background-color: #fef2f2;
-  border-bottom: 1px solid #fee2e2;
-  color: #991b1b;
-  font-size: 0.825rem;
+  background-color: var(--color-danger-light);
+  border-bottom: 1px solid rgba(229, 83, 83, 0.25);
+  color: var(--color-danger);
+  font-size: 0.8125rem;
   padding: 0.4rem 1.5rem;
   display: flex;
   align-items: center;
@@ -375,7 +412,7 @@
 .error-dismiss-btn {
   background: transparent;
   border: none;
-  color: #991b1b;
+  color: var(--color-danger);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 0 0.25rem;
@@ -406,8 +443,7 @@
     flex-direction: column;
     align-items: stretch;
     padding: 1rem 1.5rem 1.25rem;
-    gap: 0.5rem;
-    box-shadow: var(--shadow-md);
+    gap: 0.35rem;
   }
 
   .navbar-nav.nav-open {
@@ -415,8 +451,8 @@
   }
 
   .nav-link {
-    padding: 0.75rem 1rem;
-    font-size: 0.95rem;
+    padding: 0.65rem 0.875rem;
+    font-size: 0.9375rem;
     width: 100%;
   }
 
@@ -424,7 +460,7 @@
     margin-left: 0;
     margin-top: 0.5rem;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--color-border-subtle);
+    border-top: 1px solid var(--color-border);
     justify-content: center;
     width: 100%;
   }
@@ -442,7 +478,7 @@
   }
 
   .navbar-user-name {
-    max-width: 180px;
+    max-width: 200px;
   }
 
   .navbar-actions {
@@ -454,28 +490,34 @@
   .navbar-cta-btn {
     width: 100%;
     justify-content: center;
-    padding: 0.75rem;
+    padding: 0.65rem;
   }
 }
 
 @media (max-width: 480px) {
   .navbar-container {
-    padding: 0.65rem 0.875rem;
+    padding: 0.65rem 1rem;
     gap: 0.5rem;
   }
 
   .navbar-brand {
-    gap: 0.35rem;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
   }
 
   .brand-icon {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .navbar-tour-btn span:last-child {
+    display: none;
+  }
+
+  .navbar-tour-btn {
+    padding: 0.4rem 0.5rem;
   }
 
   .navbar-right-controls {
     gap: 0.35rem;
   }
 }
-
