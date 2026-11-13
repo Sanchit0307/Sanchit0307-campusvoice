@@ -1,4 +1,8 @@
-/* Notification Bell Container */
+/* ==========================================================================
+   CampusVoice Notification Bell & Notification Center Popover
+   Restrained university civic styling
+   ========================================================================== */
+
 .notification-bell-container {
   position: relative;
   display: inline-flex;
@@ -11,14 +15,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   padding: 0;
 }
 
@@ -29,9 +33,8 @@
 }
 
 .notification-bell-btn:focus-visible {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-focus-ring);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .notification-bell-btn.is-active {
@@ -41,45 +44,27 @@
 }
 
 .notification-bell-icon {
-  width: 20px;
-  height: 20px;
-  transition: transform 0.2s ease;
-}
-
-.notification-bell-btn:hover .notification-bell-icon {
-  transform: rotate(8deg);
+  width: 18px;
+  height: 18px;
 }
 
 /* Unread Badge */
 .notification-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background-color: #ef4444;
+  top: -3px;
+  right: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background-color: var(--color-primary);
   color: #ffffff;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 700;
-  line-height: 18px;
+  line-height: 16px;
   text-align: center;
-  border-radius: 9999px;
-  border: 2px solid var(--color-surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-surface);
   pointer-events: none;
-  animation: badgePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes badgePop {
-  0% {
-    transform: scale(0.5);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
 }
 
 /* Dropdown Panel */
@@ -92,24 +77,12 @@
   max-height: min(520px, 80vh);
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: panelSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes panelSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* Panel Header */
@@ -119,7 +92,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: var(--color-surface);
+  background-color: var(--color-surface-elevated);
   flex-shrink: 0;
 }
 
@@ -130,19 +103,20 @@
 }
 
 .notification-panel-title {
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
 .notification-count-chip {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.15rem 0.45rem;
-  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-xs);
   background-color: var(--color-primary-light);
-  color: var(--color-primary-text, var(--color-primary));
+  color: var(--color-primary);
   border: 1px solid var(--color-primary-border);
 }
 
@@ -150,12 +124,12 @@
   background: transparent;
   border: none;
   color: var(--color-primary);
-  font-size: 0.775rem;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm);
-  transition: all 0.15s ease;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius-xs);
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .notification-mark-all-btn:hover:not(:disabled) {
@@ -166,14 +140,14 @@
 .notification-mark-all-btn:disabled {
   color: var(--color-text-muted);
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 /* Panel Scrollable List */
 .notification-panel-list {
   overflow-y: auto;
   flex: 1;
-  padding: 0.25rem 0;
+  padding: 0;
   margin: 0;
   list-style: none;
 }
@@ -184,7 +158,7 @@
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  padding: 0.85rem 1rem;
+  padding: 0.875rem 1rem;
   border-bottom: 1px solid var(--color-border-subtle);
   background-color: var(--color-surface);
   cursor: pointer;
@@ -208,7 +182,7 @@
 }
 
 .notification-item.is-unread {
-  background-color: var(--color-primary-light);
+  background-color: var(--color-primary-subtle);
 }
 
 .notification-item.is-unread:hover {
@@ -217,17 +191,17 @@
 
 /* Unread indicator dot */
 .notification-unread-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: var(--color-primary);
   flex-shrink: 0;
-  margin-top: 0.4rem;
+  margin-top: 0.45rem;
 }
 
 .notification-dot-placeholder {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   flex-shrink: 0;
 }
 
@@ -251,79 +225,54 @@
   display: inline-block;
   font-size: 0.6875rem;
   font-weight: 700;
-  padding: 0.1rem 0.45rem;
-  border-radius: 9999px;
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-xs);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
 }
 
 .notification-status-chip.status-accepted,
 .notification-status-chip.status-approved {
-  background-color: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-[data-theme="dark"] .notification-status-chip.status-accepted,
-[data-theme="dark"] .notification-status-chip.status-approved {
-  color: #34d399;
-  border-color: rgba(52, 211, 153, 0.3);
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+  border: 1px solid rgba(53, 185, 138, 0.25);
 }
 
 .notification-status-chip.status-in-progress {
-  background-color: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-}
-
-[data-theme="dark"] .notification-status-chip.status-in-progress {
-  color: #60a5fa;
-  border-color: rgba(96, 165, 250, 0.3);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
 }
 
 .notification-status-chip.status-under-review {
-  background-color: rgba(245, 158, 11, 0.15);
-  color: #d97706;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-[data-theme="dark"] .notification-status-chip.status-under-review {
-  color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.3);
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+  border: 1px solid rgba(229, 154, 42, 0.25);
 }
 
 .notification-status-chip.status-implemented {
-  background-color: rgba(99, 102, 241, 0.15);
-  color: #6366f1;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-}
-
-[data-theme="dark"] .notification-status-chip.status-implemented {
-  color: #818cf8;
-  border-color: rgba(129, 140, 248, 0.3);
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+  border: 1px solid rgba(53, 185, 138, 0.25);
 }
 
 .notification-status-chip.status-rejected {
-  background-color: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-[data-theme="dark"] .notification-status-chip.status-rejected {
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.3);
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+  border: 1px solid rgba(229, 83, 83, 0.25);
 }
 
 .notification-time {
-  font-size: 0.72rem;
+  font-size: 0.6875rem;
   color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 .notification-message {
-  font-size: 0.825rem;
+  font-size: 0.8125rem;
   color: var(--color-text-secondary);
-  line-height: 1.4;
+  line-height: 1.45;
   margin: 0;
   word-break: break-word;
 }
@@ -339,14 +288,14 @@
   border: none;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: var(--radius-sm);
+  padding: 0.2rem;
+  border-radius: var(--radius-xs);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.15s ease;
-  margin-top: 0.2rem;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  margin-top: 0.15rem;
 }
 
 .notification-mark-item-btn:hover {
@@ -355,8 +304,7 @@
 }
 
 .notification-mark-item-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--color-primary);
+  outline: 2px solid var(--color-primary);
 }
 
 /* State Containers (Empty, Loading, Error) */
@@ -367,7 +315,7 @@
   justify-content: center;
   padding: 2.5rem 1.5rem;
   text-align: center;
-  min-height: 200px;
+  min-height: 180px;
 }
 
 .notification-state-icon {
@@ -376,10 +324,10 @@
 }
 
 .notification-state-title {
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--color-text-primary);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
 }
 
 .notification-state-desc {
@@ -393,9 +341,9 @@
 .notification-retry-btn {
   background-color: var(--color-primary);
   color: #ffffff;
-  border: none;
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
-  padding: 0.45rem 1rem;
+  padding: 0.4rem 0.875rem;
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -407,9 +355,9 @@
 }
 
 .notification-spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid var(--color-border);
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-border);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: notifSpin 0.75s linear infinite;
@@ -426,11 +374,11 @@
 @media (max-width: 480px) {
   .notification-panel {
     position: fixed;
-    top: 60px;
-    left: 12px;
-    right: 12px;
+    top: 56px;
+    left: 10px;
+    right: 10px;
     width: auto;
     max-width: none;
-    max-height: calc(100vh - 80px);
+    max-height: calc(100vh - 72px);
   }
 }

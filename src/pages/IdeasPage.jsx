@@ -112,6 +112,7 @@ function IdeasPage() {
       {/* Page Header */}
       <div className="ideas-page-header">
         <div className="ideas-header-content">
+          <span className="ideas-header-badge">Campus Proposals Directory</span>
           <h1 className="page-title">Campus Ideas</h1>
           <p className="page-subtitle">
             Browse suggestions submitted by fellow students, track progress across lifecycle stages,

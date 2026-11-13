@@ -1,34 +1,31 @@
-/* Theme Toggle Button Styles */
+/* ==========================================================================
+   CampusVoice Theme Toggle Component
+   Crisp, architectural, reliable theme switcher
+   ========================================================================== */
+
 .theme-toggle-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  min-height: 36px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
   padding: 0;
   border-radius: var(--radius-md);
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: var(--shadow-sm);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   flex-shrink: 0;
   outline: none;
 }
 
 .theme-toggle-btn:hover {
-  background-color: var(--color-surface-hover, var(--color-bg));
+  background-color: var(--color-surface-hover);
   border-color: var(--color-border-hover);
-  color: var(--color-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.theme-toggle-btn:active {
-  transform: scale(0.95);
+  color: var(--color-text-primary);
 }
 
 .theme-toggle-btn:focus-visible {
@@ -41,11 +38,6 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-  transition: transform 0.25s ease;
-}
-
-.theme-toggle-btn:hover .theme-icon-wrapper {
-  transform: rotate(12deg);
 }
 
 .theme-icon-moon {
@@ -53,19 +45,19 @@
 }
 
 .theme-toggle-btn:hover .theme-icon-moon {
-  color: var(--color-primary);
+  color: var(--color-text-primary);
 }
 
 .theme-icon-sun {
-  color: #fbbf24;
+  color: var(--color-warning);
 }
 
 .theme-toggle-btn:hover .theme-icon-sun {
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .theme-toggle-text {
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-text-primary);
   margin-left: 0.5rem;
