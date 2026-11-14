@@ -1,0 +1,326 @@
+/* ==========================================================================
+   CampusVoice IdeaStatusTimeline Component
+   Restrained vertical civic milestone progression
+   ========================================================================== */
+
+.timeline-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.timeline-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.timeline-card-title {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  border-bottom: none !important;
+}
+
+.timeline-count-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-xs);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+/* State Boxes: Loading, Error, Empty */
+.timeline-state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.25rem 1.5rem;
+  text-align: center;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  background-color: var(--color-bg);
+  margin-top: 0.5rem;
+}
+
+.timeline-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: timeline-spin 0.8s linear infinite;
+  margin-bottom: 0.75rem;
+}
+
+@keyframes timeline-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.timeline-state-text {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.timeline-error-box {
+  border-color: rgba(229, 83, 83, 0.4);
+  background-color: var(--color-danger-light);
+}
+
+.timeline-error-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-error-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-danger);
+  margin-bottom: 0.25rem;
+}
+
+.timeline-error-message {
+  font-size: 0.8125rem;
+  color: var(--color-danger);
+  margin-bottom: 1rem;
+  max-width: 400px;
+}
+
+.timeline-retry-btn {
+  padding: 0.4rem 0.875rem;
+  font-size: 0.8125rem;
+}
+
+.timeline-empty-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-text-muted);
+}
+
+.timeline-empty-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.timeline-empty-subtext {
+  font-size: 0.775rem;
+  color: var(--color-text-muted);
+}
+
+/* Legacy Notice Banner */
+.timeline-legacy-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-warning-light);
+  border: 1px solid rgba(229, 154, 42, 0.25);
+  color: var(--color-warning);
+}
+
+.timeline-legacy-icon {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.timeline-legacy-title {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+  color: var(--color-warning);
+}
+
+.timeline-legacy-desc {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* Timeline List Structure */
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0 0.25rem 0.25rem;
+  position: relative;
+}
+
+.timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: 1rem;
+  padding-bottom: 1.5rem;
+  min-width: 0;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+/* Vertical Connecting Line */
+.timeline-line {
+  position: absolute;
+  top: 16px;
+  left: 15px;
+  width: 2px;
+  bottom: 0;
+  background-color: var(--color-border);
+}
+
+.timeline-item:last-child .timeline-line {
+  display: none;
+}
+
+/* Marker Node */
+.timeline-node {
+  position: relative;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  transition: border-color 0.15s ease;
+}
+
+.timeline-node-icon {
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+/* Current Status Node */
+.timeline-node.node-current {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.timeline-node-pulse {
+  display: none;
+}
+
+/* Event Content Card */
+.timeline-content {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.875rem 1rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.timeline-item.is-current .timeline-content {
+  border-color: var(--color-primary-border);
+  background-color: var(--color-surface-elevated);
+}
+
+.timeline-content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.timeline-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.timeline-current-pill {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-xs);
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.timeline-timestamp {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.timeline-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin: 0 0 0.35rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.timeline-item.is-current .timeline-description {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.timeline-actor-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.timeline-actor-label {
+  display: inline-block;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 640px) {
+  .timeline-list {
+    padding-left: 0;
+  }
+
+  .timeline-item {
+    grid-template-columns: 28px minmax(0, 1fr);
+    column-gap: 0.75rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .timeline-line {
+    left: 13px;
+  }
+
+  .timeline-node {
+    width: 28px;
+    height: 28px;
+  }
+
+  .timeline-content {
+    padding: 0.75rem 0.875rem;
+  }
+
+  .timeline-content-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}

@@ -1,0 +1,64 @@
+/* ==========================================================================
+   CampusVoice Theme Toggle Component
+   Crisp, architectural, reliable theme switcher
+   ========================================================================== */
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
+.theme-toggle-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.theme-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.theme-icon-moon {
+  color: var(--color-text-secondary);
+}
+
+.theme-toggle-btn:hover .theme-icon-moon {
+  color: var(--color-text-primary);
+}
+
+.theme-icon-sun {
+  color: var(--color-warning);
+}
+
+.theme-toggle-btn:hover .theme-icon-sun {
+  color: var(--color-warning);
+}
+
+.theme-toggle-text {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-left: 0.5rem;
+}

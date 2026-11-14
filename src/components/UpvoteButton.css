@@ -1,0 +1,199 @@
+/* ==========================================================================
+   CampusVoice UpvoteButton Component
+   Crisp, solid, tactile civic upvoting action
+   ========================================================================== */
+
+.upvote-button-container {
+  display: inline-flex;
+  flex-direction: column;
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.upvote-container-detail {
+  width: 100%;
+}
+
+/* Base button styling */
+.upvote-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  user-select: none;
+  text-decoration: none;
+  outline: none;
+}
+
+.upvote-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.upvote-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.upvote-btn.is-loading {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+/* Spinner indicator */
+.upvote-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: upvote-spin 0.65s linear infinite;
+}
+
+@keyframes upvote-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Card Variant (compact for IdeaCard footer) */
+.upvote-btn-card {
+  gap: 0.45rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8125rem;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  min-height: 32px;
+}
+
+.upvote-btn-card:hover:not(:disabled) {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
+  color: var(--color-primary);
+}
+
+.upvote-btn-card .upvote-icon {
+  color: var(--color-primary);
+  font-size: 0.6875rem;
+  line-height: 1;
+}
+
+.upvote-btn-card .upvote-count {
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.upvote-btn-card .upvote-text {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Card Variant - Upvoted state */
+.upvote-btn-card.is-upvoted {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.upvote-btn-card.is-upvoted .upvote-icon {
+  color: var(--color-primary);
+}
+
+.upvote-btn-card.is-upvoted .upvote-count {
+  color: var(--color-primary);
+}
+
+.upvote-btn-card.is-upvoted .upvote-text {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.upvote-btn-card.is-upvoted:hover:not(:disabled) {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+/* Detail Variant (prominent sidebar CTA) */
+.upvote-btn-detail {
+  width: 100%;
+  gap: 0.65rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  min-height: 44px;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border: 1px solid var(--color-primary);
+  margin-top: 1rem;
+}
+
+.upvote-btn-detail:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+.upvote-btn-detail .upvote-icon {
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.upvote-btn-detail .upvote-pill {
+  margin-left: auto;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+/* Detail Variant - Upvoted state */
+.upvote-btn-detail.is-upvoted {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+  color: #ffffff;
+}
+
+.upvote-btn-detail.is-upvoted:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.upvote-btn-detail.is-upvoted .upvote-pill {
+  background-color: rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+}
+
+/* Error message styling */
+.upvote-error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--color-danger);
+  line-height: 1.35;
+  margin-top: 0.35rem;
+}
+
+.upvote-error-card {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.upvote-error-detail {
+  width: 100%;
+  background-color: var(--color-danger-light);
+  border: 1px solid rgba(229, 83, 83, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+}

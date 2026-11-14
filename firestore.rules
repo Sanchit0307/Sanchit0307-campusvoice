@@ -1,0 +1,385 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for authentication and role authorization
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isModerator() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/moderators/$(request.auth.uid))
+        && (
+          ('role' in get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data
+            && (get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.role == 'moderator'
+                || get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.role == 'Moderator'))
+          || ('Role' in get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data
+            && (get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.Role == 'moderator'
+                || get(/databases/$(database)/documents/moderators/$(request.auth.uid)).data.Role == 'Moderator'))
+        );
+    }
+
+    // ===============================================================
+    // MODERATORS COLLECTION: moderators/{userId}
+    // Client writes are completely denied to prevent privilege escalation.
+    // Authenticated users can read moderator records to determine their role.
+    // ===============================================================
+    match /moderators/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ===============================================================
+    // IDEAS COLLECTION: ideas/{ideaId}
+    // ===============================================================
+    match /ideas/{ideaId} {
+      // 1. Prototype public read access for ideas feed and idea details
+      allow read: if true;
+
+      // 2. Prototype public create access with strict schema and field validation
+      allow create: if isValidIdea();
+
+      // 3. Allow only authorized moderators to update idea workflow status
+      allow update: if isModerator() && isValidStatusUpdate();
+
+      // 4. Allow only authorized moderators to remove ideas permanently
+      allow delete: if isModerator();
+
+      // Validation function for incoming idea documents on proposal creation
+      function isValidIdea() {
+        let data = request.resource.data;
+
+        // Exactly the 9 fields produced by src/services/ideasService.js createIdea()
+        let requiredKeys = [
+          'title',
+          'description',
+          'category',
+          'authorId',
+          'authorName',
+          'status',
+          'upvoteCount',
+          'createdAt',
+          'updatedAt'
+        ];
+
+        // Valid categories matching src/data/mockIdeas.js IDEA_CATEGORIES
+        let allowedCategories = [
+          'Academics',
+          'Campus Life',
+          'Dining',
+          'Facilities',
+          'Sustainability',
+          'Transportation',
+          'Wellness'
+        ];
+
+        return data.keys().hasAll(requiredKeys)
+          && data.keys().hasOnly(requiredKeys)
+          && data.title is string
+          && data.title.size() >= 5
+          && data.title.size() <= 100
+          && data.description is string
+          && data.description.size() >= 20
+          && data.description.size() <= 500
+          && data.category in allowedCategories
+          && data.status == 'Submitted'
+          && data.upvoteCount == 0
+          && (data.authorId == null || (data.authorId is string && data.authorId.size() > 0 && data.authorId.size() <= 128))
+          && data.authorName is string
+          && data.authorName.size() >= 2
+          && data.authorName.size() <= 100
+          && data.createdAt is timestamp
+          && data.updatedAt is timestamp;
+      }
+
+      // Validation function for moderator status transitions
+      function isValidStatusUpdate() {
+        let incoming = request.resource.data;
+        let existing = resource.data;
+        let diff = incoming.diff(existing);
+        let allowedStatuses = [
+          'Submitted',
+          'Under Review',
+          'In Progress',
+          'Accepted',
+          'Implemented',
+          'Rejected'
+        ];
+
+        return diff.affectedKeys().hasOnly(['status', 'updatedAt'])
+          && diff.affectedKeys().hasAny(['status'])
+          && incoming.status in allowedStatuses
+          && incoming.updatedAt == request.time;
+      }
+
+      // ===============================================================
+      // STATUS HISTORY SUBCOLLECTION: ideas/{ideaId}/statusHistory/{historyId}
+      // ===============================================================
+      match /statusHistory/{historyId} {
+        // 1. Read permissions match parent idea's visibility (public read)
+        allow read: if true;
+
+        // 2. Creation:
+        // Either:
+        // a) An authorized moderator transitioning workflow status
+        // b) Initial submission event created consistently during proposal creation
+        allow create: if (isModerator() && isValidStatusTransitionHistory(ideaId))
+                      || isValidInitialHistory(ideaId);
+
+        // 3. Deny updates completely (history events are append-only and strictly immutable)
+        allow update: if false;
+
+        // 4. Deletion: Only authorized moderators can delete history records (e.g., during idea removal cleanup)
+        allow delete: if isModerator();
+
+        // Validation for moderator status transitions
+        function isValidStatusTransitionHistory(parentIdeaId) {
+          let data = request.resource.data;
+          let requiredKeys = [
+            'ideaId',
+            'previousStatus',
+            'newStatus',
+            'changedAt',
+            'changedBy',
+            'description'
+          ];
+          let allowedStatuses = [
+            'Submitted',
+            'Under Review',
+            'In Progress',
+            'Accepted',
+            'Implemented',
+            'Rejected'
+          ];
+
+          return data.keys().hasAll(requiredKeys)
+            && data.keys().hasOnly(requiredKeys)
+            && data.ideaId == parentIdeaId
+            && data.previousStatus in allowedStatuses
+            && data.newStatus in allowedStatuses
+            && data.previousStatus != data.newStatus
+            && data.changedAt == request.time
+            && data.changedBy == request.auth.uid
+            && data.description is string
+            && data.description.size() >= 3
+            && data.description.size() <= 200;
+        }
+
+        // Validation for initial proposal submission event
+        function isValidInitialHistory(parentIdeaId) {
+          let data = request.resource.data;
+          let requiredKeys = [
+            'ideaId',
+            'previousStatus',
+            'newStatus',
+            'changedAt',
+            'changedBy',
+            'description'
+          ];
+          let parentPath = /databases/$(database)/documents/ideas/$(parentIdeaId);
+          let parentAfter = getAfter(parentPath);
+
+          return data.keys().hasAll(requiredKeys)
+            && data.keys().hasOnly(requiredKeys)
+            && data.ideaId == parentIdeaId
+            && data.previousStatus == null
+            && data.newStatus == 'Submitted'
+            && data.changedAt == request.time
+            && !exists(parentPath)
+            && existsAfter(parentPath)
+            && parentAfter.data.status == 'Submitted'
+            && parentAfter.data.createdAt == request.time
+            && data.changedBy == parentAfter.data.authorId
+            && (data.changedBy == null || (isAuthenticated() && data.changedBy == request.auth.uid))
+            && data.description is string
+            && data.description.size() >= 3
+            && data.description.size() <= 200;
+        }
+      }
+
+      // ===============================================================
+      // VOTES SUBCOLLECTION: ideas/{ideaId}/votes/{userId}
+      // ===============================================================
+      match /votes/{userId} {
+        // 1. Public read for vote documents (required for getCountFromServer aggregation & checking vote state)
+        // NOTE: Exposes voter UIDs for the MVP to allow client aggregation without a trusted backend.
+        allow read: if true;
+
+        // 2. Authenticated user can ONLY create their own vote document
+        allow create: if isValidVote(userId);
+
+        // 3. Deny client updates completely (votes are toggle-only, cannot be edited)
+        allow update: if false;
+
+        // 4. Authenticated user can delete their own vote document (toggle unvote), or an authorized moderator cleaning up idea votes
+        allow delete: if (request.auth != null && request.auth.uid == userId) || isModerator();
+
+        // Validation function for incoming vote documents
+        function isValidVote(ownerId) {
+          let data = request.resource.data;
+          let voteRequiredKeys = ['userId', 'createdAt'];
+
+          return request.auth != null
+            && request.auth.uid == ownerId
+            && data.keys().hasAll(voteRequiredKeys)
+            && data.keys().hasOnly(voteRequiredKeys)
+            && data.userId == ownerId
+            && data.createdAt is timestamp;
+        }
+      }
+    }
+
+    // ===============================================================
+    // NOTIFICATIONS COLLECTION: notifications/{notificationId}
+    // ===============================================================
+    match /notifications/{notificationId} {
+      // 1. Authenticated students can read ONLY their own notifications
+      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+
+      // 2. Only authorized moderators can create notifications through the moderation workflow
+      allow create: if isModerator() && isValidNotification();
+
+      // 3. Authenticated students can only update the 'isRead' field of their own notifications
+      allow update: if isAuthenticated()
+        && resource.data.recipientId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])
+        && request.resource.data.isRead is bool;
+
+      // 4. Authenticated students can delete their own notifications
+      allow delete: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+
+      function isValidNotification() {
+        let data = request.resource.data;
+        let requiredKeys = [
+          'recipientId',
+          'ideaId',
+          'ideaTitle',
+          'type',
+          'message',
+          'previousStatus',
+          'newStatus',
+          'isRead',
+          'createdAt'
+        ];
+        let allowedStatuses = [
+          'Submitted',
+          'Under Review',
+          'In Progress',
+          'Accepted',
+          'Implemented',
+          'Rejected'
+        ];
+
+        let ideaPath = /databases/$(database)/documents/ideas/$(data.ideaId);
+
+        return data.keys().hasAll(requiredKeys)
+          && data.keys().hasOnly(requiredKeys)
+          && data.recipientId is string
+          && data.recipientId.size() > 0
+          && data.recipientId.size() <= 128
+          && data.ideaId is string
+          && data.ideaId.size() > 0
+          && data.ideaId.size() <= 128
+          && data.ideaTitle is string
+          && data.ideaTitle.size() > 0
+          && data.ideaTitle.size() <= 100
+          && data.type == 'idea_status_changed'
+          && data.message is string
+          && data.message.size() >= 5
+          && data.message.size() <= 300
+          && data.previousStatus in allowedStatuses
+          && data.newStatus in allowedStatuses
+          && data.previousStatus != data.newStatus
+          && data.isRead == false
+          && data.createdAt is timestamp
+          // Cross-check with referenced idea document
+          && exists(ideaPath)
+          && get(ideaPath).data.authorId == data.recipientId
+          && get(ideaPath).data.title == data.ideaTitle;
+      }
+    }
+
+    // ===============================================================
+    // USERS COLLECTION: users/{userId}
+    // Private student profile documents keyed by authenticated UID.
+    // Strict privacy: A student can ONLY read and write their own profile document.
+    // Role escalation, privilege modification, and unauthorized field mutation are strictly prevented.
+    // ===============================================================
+    match /users/{userId} {
+      // 1. Authenticated students can read ONLY their own private profile
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+
+      // 2. Authenticated students can create their own profile document
+      allow create: if isAuthenticated()
+        && request.auth.uid == userId
+        && isValidUserProfileCreate(userId);
+
+      // 3. Authenticated students can update ONLY permitted fields on their own profile
+      allow update: if isAuthenticated()
+        && request.auth.uid == userId
+        && isValidUserProfileUpdate();
+
+      // 4. Deny deletion by clients to preserve data integrity
+      allow delete: if false;
+
+      function isValidUserProfileCreate(ownerId) {
+        let data = request.resource.data;
+        let allowedKeys = [
+          'uid',
+          'displayName',
+          'email',
+          'bio',
+          'department',
+          'year',
+          'createdAt',
+          'updatedAt'
+        ];
+        let requiredKeys = [
+          'uid',
+          'displayName',
+          'email',
+          'createdAt',
+          'updatedAt'
+        ];
+
+        return data.keys().hasAll(requiredKeys)
+          && data.keys().hasOnly(allowedKeys)
+          && data.uid == ownerId
+          && data.email is string
+          && data.email.size() > 0
+          && data.email.size() <= 128
+          && data.displayName is string
+          && data.displayName.size() >= 2
+          && data.displayName.size() <= 50
+          && (!('bio' in data) || (data.bio is string && data.bio.size() <= 250))
+          && (!('department' in data) || (data.department is string && data.department.size() <= 100))
+          && (!('year' in data) || (data.year is string && data.year.size() <= 30))
+          && data.createdAt == request.time
+          && data.updatedAt == request.time;
+      }
+
+      function isValidUserProfileUpdate() {
+        let incoming = request.resource.data;
+        let diff = incoming.diff(resource.data);
+        let allowedUpdateKeys = [
+          'displayName',
+          'bio',
+          'department',
+          'year',
+          'updatedAt'
+        ];
+
+        return diff.affectedKeys().hasOnly(allowedUpdateKeys)
+          && diff.affectedKeys().hasAny(['displayName', 'bio', 'department', 'year', 'updatedAt'])
+          && (!diff.affectedKeys().hasAny(['displayName']) || (incoming.displayName is string && incoming.displayName.size() >= 2 && incoming.displayName.size() <= 50))
+          && (!diff.affectedKeys().hasAny(['bio']) || (incoming.bio is string && incoming.bio.size() <= 250))
+          && (!diff.affectedKeys().hasAny(['department']) || (incoming.department is string && incoming.department.size() <= 100))
+          && (!diff.affectedKeys().hasAny(['year']) || (incoming.year is string && incoming.year.size() <= 30))
+          && incoming.updatedAt == request.time;
+      }
+    }
+  }
+}
+

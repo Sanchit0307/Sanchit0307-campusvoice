@@ -1,18 +1,27 @@
+/* ==========================================================================
+   CampusVoice IdeaCard Component
+   Crisp, architectural university proposal card
+   ========================================================================== */
+
 .idea-card {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  padding: 1.375rem;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 .idea-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: #cbd5e1;
+  border-color: var(--color-border-hover);
+}
+
+.clickable-idea-card {
+  cursor: pointer;
 }
 
 .idea-card-header {
@@ -20,127 +29,181 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.875rem;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .idea-category-tag {
-  font-size: 0.775rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
   color: var(--color-text-secondary);
   background-color: var(--color-bg);
-  padding: 0.25rem 0.65rem;
-  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--color-border);
   letter-spacing: 0.02em;
+  text-transform: uppercase;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .idea-status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.35rem;
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.2rem 0.6rem;
-  border-radius: 9999px;
-  line-height: 1.2;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-xs);
+  line-height: 1.25;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background-color: currentColor;
 }
 
-/* Status badge variants */
+/* Status badge variants — Restrained University Civic Palette */
 .status-submitted {
-  background-color: #f1f5f9;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  background-color: var(--color-bg-alt);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
 }
 
 .status-under-review {
-  background-color: #fffbeb;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+  border: 1px solid rgba(229, 154, 42, 0.25);
 }
 
 .status-accepted {
-  background-color: #eef2ff;
-  color: #4338ca;
-  border: 1px solid #c7d2fe;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
 }
 
 .status-in-progress {
-  background-color: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
 }
 
 .status-implemented {
-  background-color: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+  border: 1px solid rgba(53, 185, 138, 0.25);
+}
+
+.status-rejected {
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+  border: 1px solid rgba(229, 83, 83, 0.25);
 }
 
 .idea-card-body {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
   flex: 1;
   margin-bottom: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .idea-card-title {
-  font-size: 1.125rem;
-  font-weight: 700;
+  font-size: 1.0625rem;
+  font-weight: 600;
   color: var(--color-text-primary);
   line-height: 1.35;
   letter-spacing: -0.015em;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.idea-card-title-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.idea-card-title-link:hover,
+.clickable-idea-card:hover .idea-card-title-link {
+  color: var(--color-primary);
+}
+
+.idea-card-title-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .idea-card-description {
-  font-size: 0.925rem;
+  font-size: 0.875rem;
   color: var(--color-text-secondary);
   line-height: 1.55;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .idea-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--color-border);
   margin-top: auto;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.idea-upvote-badge {
+.idea-card-view-link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.75rem;
-  background-color: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  color: var(--color-text-primary);
-  user-select: none;
+  gap: 0.25rem;
+  transition: color 0.15s ease;
 }
 
-.idea-upvote-icon {
-  color: var(--color-primary);
-  font-size: 0.75rem;
-  line-height: 1;
+.idea-card-view-link:hover,
+.clickable-idea-card:hover .idea-card-view-link {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
 }
 
-.idea-upvote-count {
-  font-weight: 700;
-  color: var(--color-text-primary);
+.idea-card-view-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 
-.idea-upvote-label {
-  color: var(--color-text-muted);
-  font-size: 0.775rem;
-  font-weight: 500;
+@media (max-width: 480px) {
+  .idea-card {
+    padding: 1.125rem 1rem;
+  }
+
+  .idea-card-header {
+    gap: 0.5rem;
+  }
+
+  .idea-card-footer {
+    gap: 0.5rem;
+  }
 }

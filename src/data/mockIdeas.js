@@ -80,3 +80,23 @@ export const mockIdeas = [
     createdAt: '6 days ago',
   },
 ]
+
+export const IDEA_CATEGORIES = [
+  'Academics',
+  'Campus Life',
+  'Dining',
+  'Facilities',
+  'Sustainability',
+  'Transportation',
+  'Wellness',
+]
+
+export function addMockIdea(newIdea) {
+  mockIdeas.unshift(newIdea)
+  return newIdea
+}
+
+export function getMockIdeaById(id) {
+  if (!id) return null
+  return mockIdeas.find((idea) => idea.id === id) || null
+}

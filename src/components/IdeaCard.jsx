@@ -1,9 +1,22 @@
+import { useNavigate, Link } from 'react-router-dom'
+import UpvoteButton from './UpvoteButton'
 import './IdeaCard.css'
 
-function IdeaCard({ idea }) {
+function IdeaCard({ idea, onVoteChange }) {
+  const navigate = useNavigate()
+
   if (!idea) return null
 
-  const { title, description, category, status, upvotes } = idea
+  const { id, title, description, category, status, upvotes, upvoteCount } = idea
+  const isVoteCountUnavailable =
+    upvoteCount === null || (upvoteCount === undefined && upvotes === null)
+  const displayUpvotes = isVoteCountUnavailable
+    ? null
+    : typeof upvoteCount === 'number'
+      ? upvoteCount
+      : typeof upvotes === 'number'
+        ? upvotes
+        : 0
 
   const getStatusClass = (statusName) => {
     switch (statusName) {
@@ -15,14 +28,29 @@ function IdeaCard({ idea }) {
         return 'status-accepted'
       case 'Implemented':
         return 'status-implemented'
+      case 'Rejected':
+        return 'status-rejected'
       case 'Submitted':
       default:
         return 'status-submitted'
     }
   }
 
+  const handleCardClick = (e) => {
+    // Prevent unintended card navigation if the user interacts with interactive elements
+    if (e.target.closest('button, a, input, select, textarea, [data-prevent-card-nav]')) {
+      return
+    }
+    if (id) {
+      navigate(`/ideas/${id}`)
+    }
+  }
+
   return (
-    <article className="idea-card">
+    <article
+      className="idea-card clickable-idea-card"
+      onClick={handleCardClick}
+    >
       <div className="idea-card-header">
         <span className="idea-category-tag">{category}</span>
         <span className={`idea-status-badge ${getStatusClass(status)}`}>
@@ -32,16 +60,36 @@ function IdeaCard({ idea }) {
       </div>
 
       <div className="idea-card-body">
-        <h2 className="idea-card-title">{title}</h2>
+        <h2 className="idea-card-title">
+          {id ? (
+            <Link to={`/ideas/${id}`} className="idea-card-title-link">
+              {title}
+            </Link>
+          ) : (
+            title
+          )}
+        </h2>
         <p className="idea-card-description">{description}</p>
       </div>
 
       <div className="idea-card-footer">
-        <div className="idea-upvote-badge" aria-label={`${upvotes} upvotes`}>
-          <span className="idea-upvote-icon" aria-hidden="true">▲</span>
-          <span className="idea-upvote-count">{upvotes}</span>
-          <span className="idea-upvote-label">upvotes</span>
-        </div>
+        <UpvoteButton
+          ideaId={id}
+          upvoteCount={displayUpvotes}
+          hasUpvoted={idea.hasUpvoted}
+          onVoteChange={onVoteChange}
+          variant="card"
+        />
+
+        {id && (
+          <Link
+            to={`/ideas/${id}`}
+            className="idea-card-view-link"
+            aria-label={`View details for ${title}`}
+          >
+            View Details &rarr;
+          </Link>
+        )}
       </div>
     </article>
   )
